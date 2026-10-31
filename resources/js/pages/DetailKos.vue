@@ -200,7 +200,11 @@ onMounted(async () => {
 <template>
     <!-- pb-28 di layar kecil memberi ruang untuk batang pemesanan tetap di
          bawah, supaya ia tidak menutupi bagian akhir halaman. -->
-    <div class="mx-auto max-w-5xl px-4 py-6 pb-28 lg:pb-6">
+    <!-- Lebih sempit daripada beranda, dan itu disengaja: halaman ini berisi
+         teks yang dibaca panjang-panjang, dan baris sepanjang 1800 px
+         melelahkan mata. Beranda berisi kartu dan peta, yang justru
+         diuntungkan oleh lebar. -->
+    <div class="mx-auto max-w-6xl px-4 py-6 pb-28 sm:px-5 lg:px-6 lg:pb-6">
         <div v-if="memuat" class="space-y-4">
             <Skeleton width="40%" height="2rem" />
             <Skeleton height="20rem" />
@@ -216,7 +220,7 @@ onMounted(async () => {
                 Kembali ke pencarian
             </RouterLink>
 
-            <header class="mt-3 mb-5">
+            <header v-muncul:naik class="mt-3 mb-5">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
                         <h1 class="font-display text-3xl leading-tight font-extrabold tracking-tight">
@@ -235,8 +239,13 @@ onMounted(async () => {
                 </div>
             </header>
 
+            <!-- Foto mengarah dari buram, sama seperti peta di beranda:
+                 gambar memang datang sebagai bidang warna lalu menjadi
+                 jelas, sehingga gerakannya meniru apa yang sebenarnya
+                 terjadi saat berkasnya diunduh. -->
             <Galleria
                 v-if="kos.foto?.length"
+                v-muncul="{ nama: 'kabur', jeda: 120 }"
                 :value="kos.foto"
                 :num-visible="5"
                 :responsive-options="[
@@ -273,7 +282,11 @@ onMounted(async () => {
 
             <div class="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
                 <div>
-                    <section>
+                    <!-- Kolom kiri masuk dari kiri, kartu pemesanan di kanan
+                         masuk dari kanan. Arah geraknya mengikuti tempat
+                         masing-masing, sehingga halaman terasa menyusun
+                         dirinya alih-alih bergetar di satu arah. -->
+                    <section v-muncul="{ nama: 'kiri', jeda: 200 }">
                         <h2 class="font-display text-xl font-semibold">Tentang kos ini</h2>
                         <p class="mt-2 max-w-prose leading-relaxed whitespace-pre-line text-[color:var(--color-tinta)]/85">
                             {{ kos.deskripsi || 'Pemilik belum menuliskan deskripsi.' }}
@@ -283,11 +296,12 @@ onMounted(async () => {
                     <template v-if="kos.fasilitas?.length">
                         <Divider />
                         <section>
-                            <h2 class="font-display text-xl font-semibold">Fasilitas</h2>
+                            <h2 v-muncul:kiri class="font-display text-xl font-semibold">Fasilitas</h2>
                             <ul class="mt-3 grid gap-2 sm:grid-cols-2">
                                 <li
-                                    v-for="fasilitas in kos.fasilitas"
+                                    v-for="(fasilitas, urutan) in kos.fasilitas"
                                     :key="fasilitas"
+                                    v-muncul="{ nama: 'kiri', jeda: Math.min(urutan, 7) * 55 }"
                                     class="flex items-center gap-2 text-sm"
                                 >
                                     <i class="pi pi-check text-xs text-[color:var(--color-indigo)]" aria-hidden="true" />
@@ -310,7 +324,10 @@ onMounted(async () => {
                             terlihat seperti kesalahan sistem.
                         -->
                         <dl class="mt-3 grid gap-3 sm:grid-cols-2">
-                            <div class="rounded-lg border border-[color:var(--color-garis)] bg-white p-3">
+                            <div
+                                v-muncul:mekar
+                                class="rounded-lg border border-[color:var(--color-garis)] bg-white p-3"
+                            >
                                 <dt class="text-sm text-[color:var(--color-tinta)]/60">Garis lurus</dt>
                                 <dd class="font-display mt-0.5 text-2xl font-semibold text-[color:var(--color-emas)]">
                                     {{ formatJarak(kos.jarak_meter) ?? '—' }}
@@ -320,7 +337,10 @@ onMounted(async () => {
                                 </dd>
                             </div>
 
-                            <div class="rounded-lg border border-[color:var(--color-garis)] bg-white p-3">
+                            <div
+                                v-muncul="{ nama: 'mekar', jeda: 110 }"
+                                class="rounded-lg border border-[color:var(--color-garis)] bg-white p-3"
+                            >
                                 <dt class="text-sm text-[color:var(--color-tinta)]/60">Lewat jalan</dt>
                                 <dd class="font-display mt-0.5 text-2xl font-semibold">
                                     <Skeleton v-if="memuatRute" width="5rem" height="1.8rem" />
@@ -342,7 +362,10 @@ onMounted(async () => {
                             {{ pesanRute }}
                         </Message>
 
-                        <div class="mt-3 h-80 overflow-hidden rounded-lg border border-[color:var(--color-garis)]">
+                        <div
+                            v-muncul="{ nama: 'kabur', jeda: 180 }"
+                            class="mt-3 h-80 overflow-hidden rounded-lg border border-[color:var(--color-garis)]"
+                        >
                             <PetaKos :daftar-kos="[kos]" :acuan="acuan" :radius="0" :rute="rute" />
                         </div>
                     </section>
@@ -350,6 +373,7 @@ onMounted(async () => {
                     <Divider />
 
                     <DaftarUlasan
+                        v-muncul:naik
                         :kos-id="kos.id"
                         :rating-rata="kos.rating_rata"
                         :jumlah-ulasan="kos.jumlah_ulasan ?? 0"
@@ -357,7 +381,10 @@ onMounted(async () => {
                 </div>
 
                 <aside id="form-pesan" class="scroll-mt-20 lg:sticky lg:top-20 lg:self-start">
-                    <div class="rounded-xl border border-[color:var(--color-garis)] bg-white p-4">
+                    <div
+                        v-muncul="{ nama: 'kanan', jeda: 260 }"
+                        class="rounded-xl border border-[color:var(--color-garis)] bg-white p-4"
+                    >
                         <p class="font-display text-3xl font-extrabold">
                             {{ rupiah(kos.harga_per_bulan) }}
                             <span class="text-base font-normal text-[color:var(--color-tinta)]/50">per bulan</span>

@@ -171,8 +171,10 @@ h3 {
  * gradiennya mengikuti referensi yang diberikan; warnanya tetap milik
  * aplikasi ini, bukan ungu-magenta yang bisa dipakai produk mana pun.
  *
- * Anyaman tipis ditumpuk di atasnya supaya permukaannya terasa bertekstur
- * alih-alih seperti sapuan warna digital.
+ * Motif sulurnya tidak ada di sini melainkan pada komponen MotifSulur.vue,
+ * yang menggambarnya sebagai SVG. Pola bergaris yang dapat dibuat dengan
+ * repeating-linear-gradient terbatas pada garis lurus; sulur dan rosette
+ * butuh kurva, dan kurva hanya bisa digambar vektor.
  *
  * Tepi bawahnya dipotong miring, seperti pada referensi. Potongannya dangkal
  * saja: kartu filter yang mengambang di atasnya sudah memberi kesan berlapis,
@@ -181,8 +183,6 @@ h3 {
 .pita-mesh {
     background-color: #16233f;
     background-image:
-        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 34px),
-        repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 34px),
         radial-gradient(62% 86% at 12% 18%, rgba(40, 70, 127, 0.95) 0%, transparent 62%),
         radial-gradient(52% 72% at 88% 10%, rgba(158, 43, 43, 0.88) 0%, transparent 60%),
         radial-gradient(48% 64% at 74% 88%, rgba(200, 146, 42, 0.5) 0%, transparent 66%),
@@ -201,9 +201,9 @@ h3 {
     border: 1px solid rgba(255, 255, 255, 0.32);
     color: #fff;
     border-radius: 999px;
-    padding: 0.4rem 1.05rem;
-    font-size: 0.875rem;
-    line-height: 1.25rem;
+    padding: 0.55rem 1.4rem;
+    font-size: 0.9375rem;
+    line-height: 1.4rem;
     transition: background-color 150ms ease, border-color 150ms ease;
 }
 
@@ -270,6 +270,78 @@ h3 {
     .pita-muat__isi {
         transition: none;
     }
+}
+
+/*
+ * Animasi masuk untuk direktif v-muncul (resources/js/animasi.js).
+ *
+ * Elemen bertanda data-muncul disembunyikan sampai ia masuk layar, lalu
+ * dianimasikan sekali. Jenis geraknya dipilih lewat nilai atribut itu,
+ * sehingga setiap bagian halaman dapat masuk dengan cara yang berbeda
+ * tanpa menambah satu pun kelas baru.
+ *
+ * Kurva cubic-bezier(.22,1,.36,1) melandai tajam di akhir: gerakannya
+ * berangkat cepat lalu berhenti perlahan, seperti benda yang punya massa.
+ */
+[data-muncul] {
+    opacity: 0;
+    will-change: transform, opacity;
+}
+
+[data-muncul].muncul-aktif {
+    animation-duration: 620ms;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    animation-fill-mode: forwards;
+    animation-delay: var(--muncul-jeda, 0ms);
+}
+
+[data-muncul='naik'].muncul-aktif { animation-name: muncul-naik; }
+[data-muncul='turun'].muncul-aktif { animation-name: muncul-turun; }
+[data-muncul='kiri'].muncul-aktif { animation-name: muncul-kiri; }
+[data-muncul='kanan'].muncul-aktif { animation-name: muncul-kanan; }
+[data-muncul='mekar'].muncul-aktif { animation-name: muncul-mekar; }
+[data-muncul='selubung'].muncul-aktif { animation-name: muncul-selubung; }
+[data-muncul='kabur'].muncul-aktif { animation-name: muncul-kabur; }
+
+@keyframes muncul-naik {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* Turun dari atas layar. Dipakai hanya untuk bilah navigasi, yang memang
+   datang dari arah itu. */
+@keyframes muncul-turun {
+    from { opacity: 0; transform: translateY(-16px); }
+    to   { opacity: 1; transform: none; }
+}
+
+@keyframes muncul-kiri {
+    from { opacity: 0; transform: translateX(-24px); }
+    to   { opacity: 1; transform: none; }
+}
+
+@keyframes muncul-kanan {
+    from { opacity: 0; transform: translateX(24px); }
+    to   { opacity: 1; transform: none; }
+}
+
+@keyframes muncul-mekar {
+    from { opacity: 0; transform: scale(0.92); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* Tersingkap dari kiri ke kanan, seperti tirai yang ditarik. Dipakai untuk
+   judul, karena gerakannya mengikuti arah baca. */
+@keyframes muncul-selubung {
+    from { opacity: 0; clip-path: inset(0 100% 0 0); transform: translateY(8px); }
+    to   { opacity: 1; clip-path: inset(0 0 0 0); transform: none; }
+}
+
+/* Mengarah tajam dari buram. Dipakai untuk peta dan gambar, yang memang
+   mulai sebagai bidang warna lalu menjadi jelas. */
+@keyframes muncul-kabur {
+    from { opacity: 0; filter: blur(10px); transform: scale(1.02); }
+    to   { opacity: 1; filter: blur(0); transform: none; }
 }
 
 /*

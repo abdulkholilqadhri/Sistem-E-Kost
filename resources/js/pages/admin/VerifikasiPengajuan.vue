@@ -58,20 +58,23 @@ onMounted(muat);
 
 <template>
     <div class="mx-auto max-w-3xl px-4 py-6">
-        <h1 class="text-2xl font-semibold tracking-tight">Verifikasi Pengajuan Pemilik Kos</h1>
-        <p class="mt-1 text-sm text-stone-600">
+        <h1 v-muncul:naik class="text-2xl font-semibold tracking-tight">
+            Verifikasi Pengajuan Pemilik Kos
+        </h1>
+        <p v-muncul="{ nama: 'naik', jeda: 90 }" class="mt-1 text-sm text-stone-600">
             Periksa berkas identitas pemohon sebelum menyetujui. Persetujuan mengubah
             peran akun menjadi pemilik kos dan tidak dapat dibatalkan dari halaman ini.
         </p>
 
         <div class="mt-4 flex gap-2">
             <button
-                v-for="pilihan in [
+                v-for="(pilihan, urutan) in [
                     { nilai: 'menunggu', label: 'Menunggu' },
                     { nilai: 'disetujui', label: 'Disetujui' },
                     { nilai: 'ditolak', label: 'Ditolak' },
                 ]"
                 :key="pilihan.nilai"
+                v-muncul="{ nama: 'mekar', jeda: 170 + urutan * 70 }"
                 type="button"
                 class="rounded-full px-3 py-1 text-sm"
                 :class="saringStatus === pilihan.nilai
@@ -98,8 +101,9 @@ onMounted(muat);
 
         <ul v-else class="mt-6 space-y-4">
             <li
-                v-for="pengajuan in daftar"
+                v-for="(pengajuan, urutan) in daftar"
                 :key="pengajuan.id"
+                v-muncul="{ nama: 'naik', jeda: Math.min(urutan, 7) * 70 }"
                 class="rounded-lg border border-stone-200 bg-white p-4"
             >
                 <div class="flex flex-wrap items-start justify-between gap-2">

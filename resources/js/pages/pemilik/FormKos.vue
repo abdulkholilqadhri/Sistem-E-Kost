@@ -102,13 +102,18 @@ onMounted(muat);
             &larr; Kembali ke daftar kos
         </RouterLink>
 
-        <h1 class="mt-3 text-2xl font-semibold tracking-tight">
+        <h1 v-muncul:naik class="mt-3 text-2xl font-semibold tracking-tight">
             {{ mode === 'baru' ? 'Tambah Kos' : 'Ubah Data Kos' }}
         </h1>
 
         <p v-if="memuat" class="mt-6 text-sm text-stone-500">Memuat...</p>
 
-        <form v-else class="mt-6 space-y-5" @submit.prevent="simpan">
+        <form
+            v-else
+            v-muncul="{ nama: 'naik', jeda: 100 }"
+            class="mt-6 space-y-5"
+            @submit.prevent="simpan"
+        >
             <p v-if="galat" class="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">
                 {{ galat }}
             </p>

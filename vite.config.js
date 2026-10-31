@@ -13,7 +13,28 @@ export default defineConfig({
             // proyek ini, sehingga halaman jatuh ke huruf bawaan sistem.
         }),
         tailwindcss(),
-        vue(),
+        vue({
+            template: {
+                /*
+                 * Secara bawaan, plugin Vue mengubah atribut src pada <img>
+                 * di dalam template menjadi impor modul, lalu Vite mencoba
+                 * menyelesaikannya saat membangun. Berkas di public/ tidak
+                 * ikut dibundel — ia dilayani apa adanya oleh server — jadi
+                 * penyelesaiannya gagal dengan "Failed to resolve import".
+                 *
+                 * includeAbsolute: false membuat path yang diawali garis
+                 * miring dibiarkan sebagai alamat biasa.
+                 *
+                 * base: null berarti tidak ada awalan yang ditambahkan pada
+                 * path relatif; keduanya adalah konfigurasi yang dianjurkan
+                 * Laravel untuk Vue di atas Vite.
+                 */
+                transformAssetUrls: {
+                    base: null,
+                    includeAbsolute: false,
+                },
+            },
+        }),
     ],
     server: {
         watch: {

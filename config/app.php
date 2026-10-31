@@ -59,13 +59,21 @@ return [
     | Application Timezone
     |--------------------------------------------------------------------------
     |
-    | Here you may specify the default timezone for your application, which
-    | will be used by the PHP date and date-time functions. The timezone
-    | is set to "UTC" by default as it is suitable for most use cases.
+    | Zona waktu aplikasi. Dipakai seluruh fungsi tanggal PHP, termasuk
+    | today() dan now() pada aturan validasi.
+    |
+    | Diubah dari UTC ke Asia/Makassar (WITA, UTC+8) karena seluruh pengguna
+    | sistem ini berada di Sulawesi Barat. Dengan UTC, antara pukul 00:00 dan
+    | 08:00 waktu setempat server masih menganggap hari ini adalah kemarin —
+    | sehingga tanggal hari ini ditolak aturan "before_or_equal:today" dengan
+    | pesan bahwa tanggalnya berada di masa depan.
+    |
+    | Kesalahan seperti itu hanya muncul pada dini hari, sehingga pengujian
+    | di siang hari tidak akan pernah menemukannya.
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'Asia/Makassar'),
 
     /*
     |--------------------------------------------------------------------------

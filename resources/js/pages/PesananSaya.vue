@@ -157,7 +157,7 @@ onMounted(muat);
 
 <template>
     <div class="mx-auto max-w-3xl px-4 py-6">
-        <h1 class="text-2xl font-semibold tracking-tight">Pesanan Saya</h1>
+        <h1 v-muncul:naik class="text-2xl font-semibold tracking-tight">Pesanan Saya</h1>
 
         <p v-if="memuat" class="mt-6 text-sm text-stone-500">Memuat...</p>
 
@@ -172,8 +172,9 @@ onMounted(muat);
 
         <ul v-else class="mt-6 space-y-4">
             <li
-                v-for="pesanan in daftar"
+                v-for="(pesanan, urutan) in daftar"
                 :key="pesanan.id"
+                v-muncul="{ nama: 'naik', jeda: Math.min(urutan, 7) * 70 }"
                 class="rounded-lg border border-stone-200 bg-white p-4"
             >
                 <div class="flex flex-wrap items-start justify-between gap-2">

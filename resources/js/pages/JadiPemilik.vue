@@ -69,14 +69,14 @@ onMounted(muat);
 
 <template>
     <div class="mx-auto max-w-2xl px-4 py-6">
-        <h1 class="text-2xl font-semibold tracking-tight">Jadi Pemilik Kos</h1>
+        <h1 v-muncul:naik class="text-2xl font-semibold tracking-tight">Jadi Pemilik Kos</h1>
 
         <p v-if="auth.adalahPemilik" class="mt-4 rounded-lg border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-900">
             Akun Anda sudah terverifikasi sebagai pemilik kos.
         </p>
 
         <template v-else>
-            <p class="mt-2 text-sm leading-relaxed text-stone-600">
+            <p v-muncul="{ nama: 'naik', jeda: 90 }" class="mt-2 text-sm leading-relaxed text-stone-600">
                 Unggah KTP untuk diverifikasi admin. Berkas identitas Anda disimpan terpisah
                 dari berkas publik dan hanya dapat dibuka admin yang memverifikasi — tidak
                 muncul di manapun pada situs ini.
@@ -90,7 +90,12 @@ onMounted(muat);
                 Pengajuan terkirim. Status akan muncul di bawah setelah admin memeriksanya.
             </div>
 
-            <form v-else class="mt-6 space-y-4" @submit.prevent="kirim">
+            <form
+                v-else
+                v-muncul="{ nama: 'naik', jeda: 170 }"
+                class="mt-6 space-y-4"
+                @submit.prevent="kirim"
+            >
                 <label class="block">
                     <span class="mb-1 block text-sm font-medium">Nama sesuai KTP</span>
                     <input
@@ -150,8 +155,9 @@ onMounted(muat);
             <h2 class="mb-3 font-semibold">Riwayat pengajuan</h2>
             <ul class="space-y-3">
                 <li
-                    v-for="pengajuan in riwayat"
+                    v-for="(pengajuan, urutan) in riwayat"
                     :key="pengajuan.id"
+                    v-muncul="{ nama: 'kiri', jeda: Math.min(urutan, 7) * 70 }"
                     class="rounded-lg border border-stone-200 bg-white p-3 text-sm"
                 >
                     <div class="flex items-center justify-between gap-2">

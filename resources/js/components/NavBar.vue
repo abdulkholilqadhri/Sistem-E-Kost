@@ -59,9 +59,16 @@ async function keluar() {
         sekali di App.vue, dan hanya pita beranda yang sengaja menariknya
         kembali agar gradiennya menembus ke belakang bilah ini.
     -->
-    <header class="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-4 sm:pt-4">
+    <header class="fixed inset-x-0 top-0 z-50 px-4 pt-3 sm:px-5 sm:pt-4 lg:px-6">
+        <!--
+            Bilah ini dipasang sekali di App.vue dan tidak pernah dilepas,
+            sehingga animasi masuknya hanya berjalan satu kali: saat pramuat
+            terangkat. Berpindah halaman tidak mengulangnya — bilahnya memang
+            tidak pergi ke mana pun.
+        -->
         <nav
-            class="mx-auto max-w-6xl rounded-2xl bg-white/95 px-4 py-2.5 shadow-[0_10px_30px_-12px_rgba(22,35,63,0.35)] backdrop-blur sm:px-5"
+            v-muncul:turun
+            class="mx-auto max-w-[1800px] rounded-2xl bg-white/95 px-4 py-3 shadow-[0_10px_30px_-12px_rgba(22,35,63,0.35)] backdrop-blur sm:px-6"
         >
             <div class="grid grid-cols-[1fr_auto] items-center gap-3 lg:grid-cols-[1fr_auto_1fr]">
                 <!-- Tautan menu, kiri. Disembunyikan di layar kecil. -->
@@ -84,9 +91,14 @@ async function keluar() {
                 -->
                 <RouterLink
                     :to="{ name: 'beranda' }"
-                    class="font-display text-lg font-extrabold tracking-tight lg:justify-self-center"
+                    class="flex items-center gap-2 lg:justify-self-center"
+                    aria-label="E-Kost, ke beranda"
                 >
-                    E&#8209;Kost
+                    <!-- Lebar dan tinggi ditulis eksplisit supaya baris
+                         navigasi tidak melompat saat berkasnya selesai
+                         dimuat. -->
+                    <img src="/logo-mark.png" width="28" height="28" alt="" class="size-7">
+                    <span class="font-display text-lg font-extrabold tracking-tight">E&#8209;Kost</span>
                 </RouterLink>
 
                 <!-- Tindakan, kanan. -->

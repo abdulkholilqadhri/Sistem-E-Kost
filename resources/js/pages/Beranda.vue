@@ -11,6 +11,8 @@ import { useToast } from 'primevue/usetoast';
 import api, { pesanGalat } from '../api';
 import PetaKos from '../components/PetaKos.vue';
 import KartuKos from '../components/KartuKos.vue';
+import MotifSulur from '../components/MotifSulur.vue';
+import AngkaBerjalan from '../components/AngkaBerjalan.vue';
 
 const toast = useToast();
 const konfigurasi = window.EKOST ?? {};
@@ -201,13 +203,34 @@ onMounted(cari);
             terlihat di belakang bilah yang melayang — hanya halaman ini yang
             melakukannya; halaman lain tetap memakai ruang itu apa adanya.
         -->
-        <section class="pita-mesh -mt-20 text-white sm:-mt-24">
-            <div class="mx-auto max-w-5xl px-4 pt-32 pb-24 text-center sm:pt-40 sm:pb-28">
-                <h1 class="font-display text-4xl leading-[1.05] font-extrabold sm:text-6xl">
+        <section class="pita-mesh relative -mt-20 overflow-hidden text-white sm:-mt-24">
+            <MotifSulur />
+            <!--
+                pt harus melampaui tinggi bilah navigasi yang melayang
+                (80 px di ponsel, 96 px di layar lebar). Sisanya adalah jarak
+                baca yang sebenarnya: sekitar 24 px, bukan 48.
+            -->
+            <!-- relative z-10 menaikkan isi di atas motif yang digambar
+                 sebagai lapisan absolut di belakangnya. -->
+            <!-- Isi pita sengaja tidak ikut dilebarkan sampai 1600 px:
+                 paragraf sepanjang itu melelahkan dibaca. Yang melebar hanya
+                 latarnya, yang memang membentang penuh. -->
+            <div class="relative z-10 mx-auto max-w-6xl px-4 pt-26 pb-16 text-center sm:pt-30 sm:pb-20">
+                <!-- Judul disingkap dari bawah ke atas, seperti pita yang
+                     digulung terbuka. Gerakan itu dipakai hanya di sini:
+                     satu gerakan yang berbeda pada satu elemen terpenting
+                     lebih terasa daripada enam gerakan yang semuanya unik. -->
+                <h1
+                    v-muncul:selubung
+                    class="font-display text-5xl leading-[1.03] font-extrabold sm:text-6xl lg:text-7xl"
+                >
                     Kos di sekitar kampus
                 </h1>
 
-                <p class="mx-auto mt-4 max-w-xl text-white/75">
+                <p
+                    v-muncul="{ nama: 'naik', jeda: 180 }"
+                    class="mx-auto mt-3 max-w-2xl text-base text-white/75 sm:text-lg"
+                >
                     <template v-if="acuan">
                         Jarak dihitung dari {{ acuan.nama }}. Geser titik acuannya kapan saja
                         dengan mengklik peta.
@@ -217,10 +240,15 @@ onMounted(cari);
                     </template>
                 </p>
 
-                <div class="mt-8 flex flex-wrap justify-center gap-2">
+                <!-- Pil-pil penyaring mengembang satu per satu dari kiri ke
+                     kanan. Jedanya berurutan supaya terbaca sebagai satu
+                     baris yang terisi, bukan empat tombol yang kebetulan
+                     bergerak bersamaan. -->
+                <div class="mt-5 flex flex-wrap justify-center gap-2">
                     <button
-                        v-for="tipe in pilihanTipe"
+                        v-for="(tipe, urutan) in pilihanTipe"
                         :key="tipe.label"
+                        v-muncul="{ nama: 'mekar', jeda: 320 + urutan * 70 }"
                         type="button"
                         class="pil"
                         :class="filter.tipe_kos === tipe.value && 'pil--aktif'"
@@ -231,10 +259,11 @@ onMounted(cari);
                     </button>
                 </div>
 
-                <div class="mt-3 flex flex-wrap justify-center gap-2">
+                <div class="mt-2 flex flex-wrap justify-center gap-2">
                     <button
-                        v-for="meter in pilihanRadius"
+                        v-for="(meter, urutan) in pilihanRadius"
                         :key="meter"
+                        v-muncul="{ nama: 'mekar', jeda: 600 + urutan * 70 }"
                         type="button"
                         class="pil"
                         :class="filter.radius === meter && 'pil--aktif'"
@@ -247,7 +276,15 @@ onMounted(cari);
             </div>
         </section>
 
-        <div class="mx-auto max-w-6xl px-4 pb-10">
+        <!-- Lebar isi 1800 px dengan jarak tepi yang ditekan serendah mungkin:
+             16 px di ponsel, 24 px di layar lebar. Monitor 1920 px kini
+             menyisakan sekitar 60 px di tiap sisi, bukan 300 px seperti pada
+             batas 7xl bawaan Tailwind.
+
+             Jarak tepi tidak dihilangkan sama sekali karena bayangan kartu
+             butuh ruang untuk jatuh; tanpa itu, kartunya tampak terpotong di
+             tepi layar. -->
+        <div class="mx-auto max-w-[1800px] px-4 pb-8 sm:px-5 lg:px-6">
             <!--
                 Kartu pencarian mengambang menimpa tepi pita, mengikuti
                 referensi. Efeknya bukan sekadar hiasan: ia menandai bahwa
@@ -255,10 +292,11 @@ onMounted(cari);
                 penyaring biasa di atas daftar.
             -->
             <section
-                class="relative z-10 -mt-16 bg-white p-5 shadow-[0_24px_50px_-20px_rgba(22,35,63,0.5)] sm:p-6"
+                v-muncul="{ nama: 'naik', jeda: 240 }"
+                class="relative z-10 -mt-12 bg-white p-4 shadow-[0_24px_50px_-20px_rgba(22,35,63,0.5)] sm:p-5"
                 aria-label="Pencarian kos"
             >
-                <div class="grid gap-5 lg:grid-cols-[1fr_auto]">
+                <div class="grid gap-4 lg:grid-cols-[1fr_auto]">
                     <form class="grid gap-3 sm:grid-cols-2" @submit.prevent="cari">
                         <IconField class="sm:col-span-2">
                             <InputIcon class="pi pi-search" />
@@ -266,6 +304,7 @@ onMounted(cari);
                                 v-model="filter.q"
                                 placeholder="Nama kos atau nama jalan"
                                 class="w-full"
+                                size="large"
                                 aria-label="Cari nama kos atau alamat"
                             />
                         </IconField>
@@ -279,16 +318,18 @@ onMounted(cari);
                             :step="100000"
                             placeholder="Harga maksimum"
                             class="w-full"
+                            size="large"
                             input-class="w-full"
                             aria-label="Harga maksimum per bulan"
                         />
 
                         <div class="flex gap-2">
-                            <Button type="submit" label="Cari kos" class="grow" :loading="memuat" />
+                            <Button type="submit" label="Cari kos" size="large" class="grow" :loading="memuat" />
                             <Button
                                 type="button"
                                 severity="secondary"
                                 outlined
+                                size="large"
                                 icon="pi pi-map-marker"
                                 aria-label="Pakai lokasi saya"
                                 :loading="menungguLokasi"
@@ -301,7 +342,7 @@ onMounted(cari);
                                 <label for="radius" class="text-sm text-[color:var(--color-tinta)]/70">
                                     Atur radius lebih halus
                                 </label>
-                                <span class="font-display font-semibold">
+                                <span class="font-display text-sm font-semibold">
                                     {{ (filter.radius / 1000).toFixed(1) }} km
                                 </span>
                             </div>
@@ -311,17 +352,21 @@ onMounted(cari);
                                 :min="200"
                                 :max="konfigurasi.radius_maksimum ?? 10000"
                                 :step="100"
-                                class="mt-2.5 w-full"
+                                class="mt-2 w-full"
                             />
                         </div>
                     </form>
 
                     <div
-                        class="flex items-center gap-4 border-t border-[color:var(--color-garis)] pt-4 lg:w-44 lg:flex-col lg:items-start lg:justify-center lg:border-l lg:border-t-0 lg:pt-0 lg:pl-6"
+                        class="flex items-center gap-3 border-t border-[color:var(--color-garis)] pt-3 lg:w-44 lg:flex-col lg:items-start lg:justify-center lg:border-l lg:border-t-0 lg:pt-0 lg:pl-6"
                     >
-                        <p class="font-display text-5xl leading-none font-extrabold text-[color:var(--color-emas)]">
+                        <!-- Angkanya berjalan naik, bukan berganti seketika.
+                             Ini satu-satunya gerakan yang menjawab tindakan
+                             pengguna: geser radius, lalu lihat angkanya
+                             bergerak — bukti bahwa pencariannya berjalan. -->
+                        <p class="font-display text-6xl leading-none font-extrabold text-[color:var(--color-emas)]">
                             <template v-if="memuat">&mdash;</template>
-                            <template v-else>{{ daftarKos.length }}</template>
+                            <AngkaBerjalan v-else :nilai="daftarKos.length" />
                         </p>
                         <p class="text-sm text-[color:var(--color-tinta)]/65">
                             kos terjangkau dalam radius {{ (filter.radius / 1000).toFixed(1) }} km
@@ -336,7 +381,8 @@ onMounted(cari);
                 tampil bersama dan pemilih ini disembunyikan.
             -->
             <div
-                class="mt-6 inline-flex rounded-full border border-[color:var(--color-garis)] bg-white p-1 lg:hidden"
+                v-muncul="{ nama: 'kiri', jeda: 320 }"
+                class="mt-5 inline-flex rounded-full border border-[color:var(--color-garis)] bg-white p-1 lg:hidden"
                 role="group"
                 aria-label="Pilih tampilan"
             >
@@ -359,13 +405,16 @@ onMounted(cari);
                 </button>
             </div>
 
-            <div class="mt-4 grid gap-5 lg:grid-cols-[1fr_1.05fr]">
+            <!-- Daftar diberi porsi lebih lebar daripada peta: kartunya yang
+                 memuat informasi yang dibandingkan, sedangkan peta cukup
+                 menunjukkan sebarannya. -->
+            <div class="mt-4 grid gap-4 lg:grid-cols-[1.35fr_1fr]">
                 <section
                     class="order-2 lg:order-1 lg:block"
                     :class="tampilan === 'peta' && 'hidden'"
                     aria-live="polite"
                 >
-                    <p class="mb-3 text-sm text-[color:var(--color-tinta)]/60">
+                    <p class="mb-2 text-sm text-[color:var(--color-tinta)]/60">
                         <template v-if="memuat">Mencari kos...</template>
                         <template v-else-if="daftarKos.length">Terdekat lebih dulu</template>
                     </p>
@@ -391,6 +440,7 @@ onMounted(cari);
 
                     <div
                         v-else-if="daftarKos.length === 0"
+                        v-muncul:mekar
                         class="bg-white p-8 text-center shadow-[0_12px_28px_-16px_rgba(22,35,63,0.38)]"
                     >
                         <p class="font-display text-lg font-semibold">Belum ada yang cocok</p>
@@ -407,17 +457,27 @@ onMounted(cari);
                         />
                     </div>
 
+                    <!--
+                        TransitionGroup tinggal mengurus perpindahan posisi
+                        kartu saat hasil pencarian berubah; kemunculannya
+                        diserahkan ke v-muncul agar tidak ada dua mekanisme
+                        yang sama-sama mengatur opacity.
+
+                        Jedanya dibatasi tujuh langkah. Tanpa batas itu,
+                        kartu kedua puluh menunggu 1,4 detik — yang sudah
+                        bukan lagi riak, melainkan penundaan.
+                    -->
                     <TransitionGroup
                         v-else
                         tag="div"
-                        class="grid gap-5 sm:grid-cols-2"
-                        enter-from-class="opacity-0"
-                        enter-active-class="transition-opacity duration-200"
+                        class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3"
+                        move-class="transition-transform duration-300 ease-out"
                     >
                         <KartuKos
-                            v-for="kos in daftarKos"
+                            v-for="(kos, urutan) in daftarKos"
                             :id="`kos-${kos.id}`"
                             :key="kos.id"
+                            v-muncul="{ nama: 'naik', jeda: Math.min(urutan, 7) * 70 }"
                             :kos="kos"
                             :radius="filter.radius"
                             :tersorot="kosTersorot === kos.id"
@@ -426,7 +486,11 @@ onMounted(cari);
                     </TransitionGroup>
                 </section>
 
+                <!-- Peta mengarah dari buram menjadi jelas. Gerakan itu cocok
+                     khusus untuk peta: petaknya memang datang sebagai bidang
+                     warna lalu menjadi terbaca saat petaknya selesai diunduh. -->
                 <section
+                    v-muncul="{ nama: 'kabur', jeda: 160 }"
                     class="order-1 overflow-hidden shadow-[0_12px_28px_-16px_rgba(22,35,63,0.38)] lg:sticky lg:top-28 lg:order-2 lg:block lg:h-[calc(100vh-9rem)]"
                     :class="tampilan === 'daftar' ? 'hidden lg:block' : 'h-[70vh]'"
                     aria-label="Peta sebaran kos"

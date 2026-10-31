@@ -97,14 +97,31 @@ onMounted(() => {
             situs lain bila halaman ini yang pertama ia buka. Lebarnya
             disamakan dengan kartu di bawahnya supaya tepi kirinya sejajar.
         -->
-        <div class="atas-auth">
+        <div v-muncul:naik class="atas-auth">
             <RouterLink :to="{ name: 'beranda' }" class="tautan-kembali">
                 <i class="pi pi-arrow-left" aria-hidden="true" />
                 Kembali ke beranda
             </RouterLink>
         </div>
 
-        <div class="kotak" :class="{ 'panel-kanan-aktif': panelKananAktif }">
+        <img
+            v-muncul="{ nama: 'mekar', jeda: 90 }"
+            src="/logo-ekost.png"
+            alt="E-Kost"
+            class="lambang-auth"
+            width="150"
+            height="130"
+        >
+
+        <!-- Kartunya naik sekali saat halaman dibuka. Tirai yang bergeser
+             antara Masuk dan Daftar adalah animasi lain yang menjawab klik
+             pengguna, dan keduanya tidak bertabrakan: yang satu sekali di
+             awal, yang satu setiap kali panelnya ditukar. -->
+        <div
+            v-muncul="{ nama: 'naik', jeda: 180 }"
+            class="kotak"
+            :class="{ 'panel-kanan-aktif': panelKananAktif }"
+        >
             <div class="wadah-form wadah-daftar">
                 <form novalidate @submit.prevent="kirimDaftar">
                     <h1>Buat akun</h1>
@@ -275,6 +292,12 @@ onMounted(() => {
 
 .tautan-kembali:hover i {
     transform: translateX(-2px);
+}
+
+.lambang-auth {
+    width: 150px;
+    height: auto;
+    margin-bottom: 1.25rem;
 }
 
 .kotak {

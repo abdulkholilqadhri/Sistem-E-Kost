@@ -64,7 +64,7 @@ const jarak = computed(() => {
                      antara nama dan harga membuatnya ikut tenggelam. -->
                 <span
                     v-if="jarak"
-                    class="bendera-jarak absolute bottom-3 left-3 px-2.5 py-1 text-sm"
+                    class="bendera-jarak absolute bottom-3 left-3 px-3 py-1.5 text-base"
                 >
                     {{ jarak }} ke kampus
                 </span>
@@ -81,7 +81,7 @@ const jarak = computed(() => {
                 </span>
             </div>
 
-            <div class="p-5">
+            <div class="p-4">
                 <h3 class="font-display text-lg leading-snug font-semibold">
                     {{ kos.nama_kos }}
                 </h3>
@@ -93,12 +93,12 @@ const jarak = computed(() => {
                 <StripJarak
                     :jarak-meter="kos.jarak_meter"
                     :radius-meter="radius"
-                    class="mt-4"
+                    class="mt-3"
                 />
 
-                <div class="mt-4 flex items-end justify-between gap-2">
-                    <p class="font-display text-xl leading-none font-extrabold">
-                        <span class="text-sm font-semibold text-[color:var(--color-tinta)]/60">Rp</span>
+                <div class="mt-3 flex items-end justify-between gap-2">
+                    <p class="font-display text-2xl leading-none font-extrabold">
+                        <span class="text-base font-semibold text-[color:var(--color-tinta)]/60">Rp</span>
                         {{ harga }}
                         <span class="text-sm font-normal text-[color:var(--color-tinta)]/50">/bln</span>
                     </p>
@@ -121,7 +121,7 @@ const jarak = computed(() => {
                      Seluruh kartu sudah dapat diklik; ini menegaskan ke mana
                      kliknya menuju. -->
                 <p
-                    class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[color:var(--color-indigo)] transition-transform duration-200 group-hover:translate-x-0.5"
+                    class="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[color:var(--color-indigo)] transition-transform duration-200 group-hover:translate-x-0.5"
                 >
                     Lihat detail
                     <i class="pi pi-arrow-right text-[0.7rem]" aria-hidden="true" />

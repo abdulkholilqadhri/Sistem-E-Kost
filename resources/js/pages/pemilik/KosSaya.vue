@@ -87,7 +87,7 @@ onMounted(muat);
 
 <template>
     <div class="mx-auto max-w-4xl px-4 py-6">
-        <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div v-muncul:naik class="mb-6 flex flex-wrap items-center justify-between gap-3">
             <div>
                 <h1 class="text-2xl font-semibold tracking-tight">Kos Saya</h1>
                 <p class="mt-1 text-sm text-stone-600">Kelola data kos, foto, dan ketersediaan kamar.</p>
@@ -116,8 +116,9 @@ onMounted(muat);
 
         <ul v-else class="space-y-4">
             <li
-                v-for="kos in daftar"
+                v-for="(kos, urutan) in daftar"
                 :key="kos.id"
+                v-muncul="{ nama: 'naik', jeda: Math.min(urutan, 7) * 70 }"
                 class="rounded-lg border border-stone-200 bg-white p-4"
             >
                 <div class="flex flex-wrap items-start justify-between gap-3">
