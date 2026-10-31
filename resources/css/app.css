@@ -1,9 +1,304 @@
-@import 'tailwindcss';
+/*
+ * Urutan lapisan ini harus sama persis dengan yang disetel pada
+ * resources/js/theme.js (opsi cssLayer.order). Lapisan yang disebut belakangan
+ * menang. 'utilities' sengaja paling akhir supaya kelas Tailwind dapat
+ * menimpa gaya bawaan komponen PrimeVue.
+ *
+ * Kalau suatu saat komponen PrimeVue tampil tanpa gaya, atau kelas Tailwind
+ * pada komponen PrimeVue tidak berpengaruh, periksa dua tempat ini lebih dulu
+ * sebelum menduga yang lain.
+ */
+@layer theme, base, primevue, components, utilities;
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
+@import 'tailwindcss';
+@import 'leaflet/dist/leaflet.css';
+@import 'primeicons/primeicons.css';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    /*
+     * Dua keluarga huruf yang jelas berbeda perannya.
+     * Bricolage Grotesque punya karakter yang sedikit ganjil dan ramah —
+     * cocok untuk produk mahasiswa, dan tidak terdengar seperti bank.
+     * Instrument Sans menangani teks yang dibaca panjang-panjang.
+     */
+    --font-display: 'Bricolage Grotesque', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+
+    /*
+     * Palet sarung sutera Mandar.
+     * Indigo untuk tinta dan tindakan, emas untuk jarak, maroon untuk
+     * peringatan. Latar memakai abu kebiruan, bukan krem — krem hangat
+     * membuat foto kos yang kekuningan tampak kusam.
+     */
+    --color-tinta: #16233f;
+    --color-indigo: #1f3766;
+    --color-indigo-muda: #28467f;
+    --color-emas: #c8922a;
+    --color-emas-muda: #f0e2c2;
+    --color-maroon: #9e2b2b;
+    --color-kertas: #e9edf2;
+    --color-garis: #d7dee7;
+}
+
+html,
+body {
+    /* Ditulis eksplisit, tidak mengandalkan preflight: bila huruf gagal
+       dimuat, jatuhnya harus ke sans-serif sistem — bukan ke huruf bawaan
+       peramban, yang pada sebagian penyiapan Linux adalah monospace. */
+    font-family: var(--font-sans);
+    background-color: var(--color-kertas);
+    color: var(--color-tinta);
+}
+
+.font-display,
+h1,
+h2,
+h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+}
+
+/*
+ * Peta Leaflet wajib punya tinggi eksplisit. Tanpa ini elemennya ada di DOM
+ * tetapi tingginya nol, dan layarnya tampak kosong tanpa pesan apa pun.
+ *
+ * PENTING: elemen ber-kelas .peta harus dibungkus wadah yang punya tinggi
+ * tetap. Aturan ini ditulis tanpa @layer, sehingga height:100% di bawah
+ * SELALU mengalahkan kelas tinggi Tailwind seperti h-72 yang dipasang
+ * langsung pada elemen yang sama — dan hasilnya peta setinggi nol.
+ *
+ *   Benar : <div class="h-72"><div class="peta" /></div>
+ *   Salah : <div class="peta h-72" />
+ */
+.peta {
+    height: 100%;
+    width: 100%;
+    z-index: 0;
+}
+
+.leaflet-container {
+    font-family: var(--font-sans);
+}
+
+.leaflet-tooltip {
+    border-radius: 6px;
+    border: none;
+    font-weight: 500;
+    box-shadow: 0 2px 10px rgba(22, 35, 63, 0.22);
+}
+
+/*
+ * Penanda harga di peta.
+ *
+ * Wadahnya sengaja berukuran nol: Leaflet menaruh titik jangkar tepat di
+ * koordinat kos, lalu label di dalamnya digeser setengah lebarnya sendiri
+ * supaya tepat berpusat di titik itu — berapa pun panjang teks harganya.
+ */
+.penanda-wadah {
+    width: 0 !important;
+    height: 0 !important;
+}
+
+.penanda-harga {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    white-space: nowrap;
+    background: #fff;
+    border: 1px solid var(--color-garis);
+    color: var(--color-tinta);
+    border-radius: 999px;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    box-shadow: 0 1px 5px rgba(22, 35, 63, 0.28);
+    transition: transform 150ms ease, background-color 150ms ease, color 150ms ease;
+    cursor: pointer;
+}
+
+.penanda-harga--aktif {
+    background: var(--color-tinta);
+    border-color: var(--color-tinta);
+    color: #fff;
+    transform: translate(-50%, -50%) scale(1.14);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .penanda-harga {
+        transition: none;
+    }
+}
+
+/*
+ * Strip jarak.
+ *
+ * Satu garis tipis yang memperlihatkan posisi sebuah kos di dalam radius yang
+ * sedang dipakai: kiri berarti tepat di titik acuan, kanan berarti di tepi
+ * radius. Gunanya membandingkan sekilas — mata menangkap posisi penanda jauh
+ * lebih cepat daripada membaca deretan angka meter satu per satu.
+ */
+.strip-jarak {
+    position: relative;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--color-kertas);
+    border: 1px solid var(--color-garis);
+    overflow: hidden;
+}
+
+/* Bagian terisi menunjukkan seberapa jauh kos ini memakan radius yang
+   tersedia. Makin pendek, makin dekat. */
+.strip-jarak__isi {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: linear-gradient(to right, var(--color-emas-muda), var(--color-emas));
+}
+
+/* Bendera jarak pada foto kartu. Angka inilah yang paling menentukan
+   keputusan, jadi ia yang diberi warna paling mencolok di seluruh halaman. */
+.bendera-jarak {
+    background: var(--color-emas);
+    color: #231a05;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    box-shadow: 0 1px 3px rgba(22, 35, 63, 0.3);
+}
+
+/*
+ * Pita atas.
+ *
+ * Gradien mesh dibangun dari beberapa radial-gradient yang saling tumpuk,
+ * memakai warna sarung Mandar: indigo, maroon, emas, hijau tua. Teknik
+ * gradiennya mengikuti referensi yang diberikan; warnanya tetap milik
+ * aplikasi ini, bukan ungu-magenta yang bisa dipakai produk mana pun.
+ *
+ * Anyaman tipis ditumpuk di atasnya supaya permukaannya terasa bertekstur
+ * alih-alih seperti sapuan warna digital.
+ *
+ * Tepi bawahnya dipotong miring, seperti pada referensi. Potongannya dangkal
+ * saja: kartu filter yang mengambang di atasnya sudah memberi kesan berlapis,
+ * dan sudut yang terlalu tajam akan memakan ruang baca.
+ */
+.pita-mesh {
+    background-color: #16233f;
+    background-image:
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 34px),
+        repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 34px),
+        radial-gradient(62% 86% at 12% 18%, rgba(40, 70, 127, 0.95) 0%, transparent 62%),
+        radial-gradient(52% 72% at 88% 10%, rgba(158, 43, 43, 0.88) 0%, transparent 60%),
+        radial-gradient(48% 64% at 74% 88%, rgba(200, 146, 42, 0.5) 0%, transparent 66%),
+        radial-gradient(72% 92% at 30% 98%, rgba(31, 77, 61, 0.62) 0%, transparent 62%);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 2.5rem), 0 100%);
+}
+
+/*
+ * Tombol pilihan berbentuk pil, mengikuti referensi.
+ *
+ * Dipakai untuk pilihan yang jumlahnya sedikit dan saling meniadakan —
+ * tipe kos dan radius. Untuk pilihan sebanyak itu, pil yang semuanya terlihat
+ * sekaligus lebih cepat dipakai daripada daftar yang harus dibuka dulu.
+ */
+.pil {
+    border: 1px solid rgba(255, 255, 255, 0.32);
+    color: #fff;
+    border-radius: 999px;
+    padding: 0.4rem 1.05rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.pil:hover {
+    background-color: rgba(255, 255, 255, 0.14);
+}
+
+.pil--aktif {
+    background-color: #fff;
+    border-color: #fff;
+    color: var(--color-tinta);
+    font-weight: 600;
+}
+
+.pil--aktif:hover {
+    background-color: #fff;
+}
+
+/*
+ * Slider di atas pita gelap. Warna bawaan PrimeVue memakai nada permukaan
+ * terang, yang nyaris hilang di latar indigo tua.
+ */
+.slider-terang .p-slider {
+    background: rgba(255, 255, 255, 0.22);
+}
+
+.slider-terang .p-slider-range {
+    background: var(--color-emas);
+}
+
+.slider-terang .p-slider-handle {
+    background: #fff;
+    border-color: var(--color-emas);
+}
+
+/*
+ * Indikator pemuatan halaman.
+ *
+ * Diletakkan di tepi atas dengan z-index di atas bilah navigasi yang
+ * menempel, supaya tetap terlihat berapa pun posisi gulirannya.
+ */
+.pita-muat {
+    position: fixed;
+    inset: 0 0 auto 0;
+    height: 3px;
+    z-index: 60;
+    background: rgba(22, 35, 63, 0.08);
+    pointer-events: none;
+}
+
+.pita-muat__isi {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-indigo-muda), var(--color-emas));
+
+    /* Perpindahan lebarnya dibuat melandai di ujung: pertambahan awal terasa
+       cepat, mendekati selesai terasa menahan — pola yang sama dengan cara
+       pemuatan sungguhan terasa oleh pengguna. */
+    transition: width 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow: 0 0 8px rgba(200, 146, 42, 0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pita-muat__isi {
+        transition: none;
+    }
+}
+
+/*
+ * Transisi halaman. Satu gerakan singkat yang menjawab perpindahan rute,
+ * bukan animasi masuk di setiap bagian.
+ */
+.halaman-enter-active,
+.halaman-leave-active {
+    transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.halaman-enter-from {
+    opacity: 0;
+    transform: translateY(6px);
+}
+
+.halaman-leave-to {
+    opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .halaman-enter-active,
+    .halaman-leave-active {
+        transition: none;
+    }
+}
+
+/* Fokus keyboard harus selalu terlihat, termasuk di atas komponen PrimeVue. */
+:focus-visible {
+    outline: 2px solid var(--color-indigo-muda);
+    outline-offset: 2px;
 }

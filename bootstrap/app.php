@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\PastikanAkunAktif;
+use App\Http\Middleware\PastikanRole;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -13,7 +15,16 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // SPA dan API berada pada domain yang sama, sehingga autentikasi
+        // memakai cookie sesi, bukan token di localStorage. statefulApi()
+        // memasang middleware sesi dan verifikasi CSRF untuk permintaan yang
+        // datang dari domain pada SANCTUM_STATEFUL_DOMAINS.
+        $middleware->statefulApi();
+
+        $middleware->alias([
+            'role' => PastikanRole::class,
+            'akun.aktif' => PastikanAkunAktif::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

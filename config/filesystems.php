@@ -30,10 +30,21 @@ return [
 
     'disks' => [
 
+        /*
+         * Disk privat. Menyimpan berkas KTP dan bukti transfer, yang memuat
+         * NIK dan nomor rekening.
+         *
+         * 'serve' diubah menjadi false. Bila true, Laravel mendaftarkan rute
+         * HTTP yang menyajikan isi disk ini. Berkas identitas tidak boleh
+         * bergantung pada perilaku rute bawaan kerangka kerja: satu-satunya
+         * jalan keluar berkas di sini adalah controller yang memanggil Policy
+         * lebih dulu (PengajuanPemilikPolicy::lihatDokumen dan
+         * PembayaranPolicy::view).
+         */
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            'serve' => false,
             'throw' => false,
             'report' => false,
         ],
