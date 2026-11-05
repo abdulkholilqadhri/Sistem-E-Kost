@@ -12,12 +12,18 @@ return [
     | Nilainya wajib diisi di .env; tanpa itu pencarian berbasis jarak tidak
     | akan memberi hasil yang benar.
     |
+    | filled() dipakai, bukan pembandingan dengan null: baris "EKOST_KAMPUS_LAT="
+    | yang kosong di .env menghasilkan string kosong, dan (float) '' adalah 0.
+    | Koordinat 0,0 berada di Teluk Guinea, sehingga pencarian akan tetap
+    | berjalan tetapi seluruh jaraknya salah tanpa satu pun pesan kesalahan.
+    | Dibiarkan null, kegagalan itu terlihat sejak awal.
+    |
     */
 
     'kampus' => [
         'nama' => env('EKOST_KAMPUS_NAMA', 'Universitas Sulawesi Barat'),
-        'lat' => env('EKOST_KAMPUS_LAT') !== null ? (float) env('EKOST_KAMPUS_LAT') : null,
-        'lng' => env('EKOST_KAMPUS_LNG') !== null ? (float) env('EKOST_KAMPUS_LNG') : null,
+        'lat' => filled(env('EKOST_KAMPUS_LAT')) ? (float) env('EKOST_KAMPUS_LAT') : null,
+        'lng' => filled(env('EKOST_KAMPUS_LNG')) ? (float) env('EKOST_KAMPUS_LNG') : null,
     ],
 
     /*
@@ -33,6 +39,36 @@ return [
 
     'radius_default' => (int) env('EKOST_RADIUS_DEFAULT', 1000),
     'radius_maksimum' => (int) env('EKOST_RADIUS_MAKSIMUM', 10000),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Daftar Fasilitas
+    |--------------------------------------------------------------------------
+    |
+    | Satu daftar baku untuk dua tempat: pilihan centang saat pemilik
+    | mendaftarkan kos, dan penyaring pada halaman pencarian.
+    |
+    | Harus satu sumber. Bila daftarnya ditulis terpisah di formulir dan di
+    | penyaring, satu perbedaan ejaan saja sudah cukup membuat penyaring tidak
+    | pernah menemukan kos mana pun — "KM Dalam" pada penyaring tidak akan
+    | cocok dengan "Kamar Mandi Dalam" yang tersimpan di basis data. Kegagalan
+    | semacam itu tidak memunculkan galat apa pun, hanya hasil kosong yang
+    | tampak seperti memang tidak ada kos yang cocok.
+    |
+    */
+
+    'fasilitas' => [
+        'WiFi',
+        'Kamar Mandi Dalam',
+        'AC',
+        'Kasur',
+        'Lemari',
+        'Meja Belajar',
+        'Dapur Bersama',
+        'Parkir Motor',
+        'Air Panas',
+        'Laundry',
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -69,6 +105,33 @@ return [
     ],
 
     'maksimum_foto_per_kos' => (int) env('EKOST_MAKSIMUM_FOTO_PER_KOS', 12),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Sumber Foto Simulasi (hanya untuk seeder)
+    |--------------------------------------------------------------------------
+    |
+    | Menentukan gambar apa yang dipasang seeder pada kos contoh. Tidak
+    | berpengaruh sama sekali pada foto yang diunggah pemilik kos sungguhan.
+    |
+    |   'ilustrasi' — ilustrasi ruangan dari public/foto-contoh. Tampak depan,
+    |                 kamar tidur, dan kamar mandi, dalam empat warna. Berkasnya
+    |                 ada di dalam proyek, sehingga tidak pernah gagal dimuat
+    |                 dan tidak bergantung pada koneksi apa pun.
+    |   'picsum'    — foto acak dari picsum.photos, dimuat peramban langsung
+    |                 dari internet. Subjeknya bukan kamar kos, dan seluruh
+    |                 kartu kehilangan gambarnya bila koneksi bermasalah.
+    |   'tenun'     — gambar bermotif sarung Mandar yang dibuat seeder memakai
+    |                 GD. Datar, tetapi memuat nama kos dan penanda "DATA
+    |                 SIMULASI" di atasnya.
+    |
+    | Bawaannya 'ilustrasi'. Untuk sidang, inilah yang paling aman: gambar yang
+    | gagal dimuat meninggalkan kartu kosong di seluruh halaman, dan itu terjadi
+    | justru pada saat yang paling tidak tepat.
+    |
+    */
+
+    'foto_simulasi' => env('EKOST_FOTO_SIMULASI', 'ilustrasi'),
 
     /*
     |--------------------------------------------------------------------------

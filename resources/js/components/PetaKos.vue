@@ -106,6 +106,58 @@ function buatPeta() {
     gambarPenanda();
 }
 
+/**
+ * Menggeser jari-jari lingkaran radius secara bertahap, bukan melompat.
+ *
+ * Leaflet menggambar ulang lingkarannya seketika pada setiap setRadius, jadi
+ * animasinya tidak bisa diserahkan ke CSS seperti elemen biasa — nilainya
+ * sendiri yang harus dijalankan bertahap, satu langkah per bingkai layar.
+ *
+ * Animasi yang sedang berjalan dibatalkan lebih dulu. Tanpa itu, menggeser
+ * penggeser radius dengan cepat akan menyalakan beberapa animasi sekaligus
+ * dan lingkarannya bergetar di antara dua tujuan yang berbeda.
+ */
+let animasiRadius = 0;
+
+function geserRadius(tujuan) {
+    cancelAnimationFrame(animasiRadius);
+
+    const lingkaran = lingkaranRadius.value;
+
+    if (!lingkaran) {
+        return;
+    }
+
+    const awal = lingkaran.getRadius();
+    const selisih = tujuan - awal;
+
+    if (inginGerakDikurangi() || Math.abs(selisih) < 1) {
+        lingkaran.setRadius(tujuan);
+
+        return;
+    }
+
+    const mulai = performance.now();
+    const DURASI = 420;
+
+    function langkah(sekarang) {
+        const maju = Math.min(1, (sekarang - mulai) / DURASI);
+        const landai = 1 - Math.pow(1 - maju, 3);
+
+        lingkaran.setRadius(awal + selisih * landai);
+
+        if (maju < 1) {
+            animasiRadius = requestAnimationFrame(langkah);
+        }
+    }
+
+    animasiRadius = requestAnimationFrame(langkah);
+}
+
+function inginGerakDikurangi() {
+    return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+}
+
 function gambarAcuan() {
     if (!peta.value || !props.acuan) {
         return;
@@ -116,12 +168,24 @@ function gambarAcuan() {
     if (penandaAcuan.value) {
         penandaAcuan.value.setLatLng(posisi);
     } else {
-        penandaAcuan.value = L.circleMarker(posisi, {
-            radius: 8,
-            color: '#16233f',
-            fillColor: '#c8922a',
-            fillOpacity: 1,
-            weight: 3,
+        /*
+         * divIcon, bukan circleMarker. Riak yang mengembang butuh beberapa
+         * lapisan dengan penundaan berbeda, dan itu jauh lebih mudah ditulis
+         * sebagai CSS daripada sebagai SVG milik Leaflet. Bentuk dan geraknya
+         * ada di resources/css/app.css pada kelas .titik-acuan.
+         */
+        penandaAcuan.value = L.marker(posisi, {
+            icon: L.divIcon({
+                className: 'titik-acuan',
+                html: '<span class="riak"></span><span class="riak"></span>'
+                    + '<span class="riak"></span><span class="inti"></span>',
+                iconSize: [0, 0],
+            }),
+
+            // Titik acuan harus selalu di atas penanda kos; ia yang menjadi
+            // rujukan seluruh jarak yang dihitung.
+            zIndexOffset: 1000,
+            interactive: false,
         })
             .addTo(peta.value)
             .bindTooltip(props.acuan.nama ?? 'Titik acuan', { direction: 'top' });
@@ -129,7 +193,8 @@ function gambarAcuan() {
 
     if (props.radius > 0) {
         if (lingkaranRadius.value) {
-            lingkaranRadius.value.setLatLng(posisi).setRadius(props.radius);
+            lingkaranRadius.value.setLatLng(posisi);
+            geserRadius(props.radius);
         } else {
             lingkaranRadius.value = L.circle(posisi, {
                 radius: props.radius,
@@ -140,6 +205,7 @@ function gambarAcuan() {
             }).addTo(peta.value);
         }
     } else if (lingkaranRadius.value) {
+        cancelAnimationFrame(animasiRadius);
         lingkaranRadius.value.remove();
         lingkaranRadius.value = null;
     }
@@ -245,12 +311,42 @@ watch(
                 penanda.setIcon(ikonHarga(kos, id === baru));
             }
         });
+
+        pantulkan(baru);
     },
 );
+
+/**
+ * Memantulkan penanda yang baru disorot.
+ *
+ * Kelasnya dipasang setelah setIcon, bukan ikut ditulis ke dalam HTML ikonnya.
+ * setIcon membuang elemen lama dan membuat yang baru, sehingga kelas yang
+ * sudah ada di dalam HTML akan ikut tergambar ulang setiap kali — dan
+ * animasinya tidak pernah selesai.
+ *
+ * Kelasnya dilepas sendiri saat animasinya habis, supaya pantulan berikutnya
+ * benar-benar berjalan lagi dari awal. Tanpa itu, menyorot kartu yang sama dua
+ * kali berturut-turut tidak menghasilkan gerakan apa pun.
+ */
+function pantulkan(id) {
+    const elemen = penandaPerKos.value.get(id)?.getElement()?.firstElementChild;
+
+    if (!elemen || inginGerakDikurangi()) {
+        return;
+    }
+
+    elemen.classList.add('penanda-harga--memantul');
+    elemen.addEventListener(
+        'animationend',
+        () => elemen.classList.remove('penanda-harga--memantul'),
+        { once: true },
+    );
+}
 
 onMounted(buatPeta);
 
 onBeforeUnmount(() => {
+    cancelAnimationFrame(animasiRadius);
     pengamatUkuran?.disconnect();
     pengamatUkuran = null;
 

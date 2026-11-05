@@ -122,9 +122,81 @@ h3 {
     transform: translate(-50%, -50%) scale(1.14);
 }
 
+/*
+ * Pantulan penanda saat kartunya disentuh kursor.
+ *
+ * Perubahan warna saja mudah terlewat pada peta berisi dua puluh penanda.
+ * Pantulannya dibatasi dua kali oleh kelas yang dilepas sendiri setelah
+ * animasinya habis — pantulan tanpa henti selama kursor masih di atas kartu
+ * berubah dari penunjuk menjadi gangguan.
+ */
+.penanda-harga--memantul {
+    animation: penanda-memantul 560ms cubic-bezier(0.3, 1.4, 0.5, 1) 2;
+}
+
+@keyframes penanda-memantul {
+    0%, 100% { transform: translate(-50%, -50%) scale(1.14); }
+    35%      { transform: translate(-50%, -150%) scale(1.14); }
+    60%      { transform: translate(-50%, -50%) scale(1.14); }
+    78%      { transform: translate(-50%, -94%) scale(1.14); }
+}
+
+/*
+ * Titik acuan beserta riaknya.
+ *
+ * Digambar sebagai divIcon, bukan circleMarker seperti sebelumnya: riaknya
+ * butuh beberapa lapisan yang mengembang dengan penundaan berbeda, dan itu
+ * jauh lebih mudah dikerjakan CSS daripada SVG milik Leaflet.
+ *
+ * Tiga riak dengan penundaan sepertiga putaran masing-masing, sehingga selalu
+ * ada satu yang sedang mengembang dan riaknya tidak pernah terputus.
+ */
+.titik-acuan span {
+    position: absolute;
+    top: 0;
+    left: 0;
+    border-radius: 999px;
+    translate: -50% -50%;
+}
+
+.titik-acuan .inti {
+    width: 17px;
+    height: 17px;
+    background: var(--color-emas);
+    border: 3px solid var(--color-tinta);
+    box-shadow: 0 1px 5px rgba(22, 35, 63, 0.45);
+}
+
+.titik-acuan .riak {
+    width: 21px;
+    height: 21px;
+    border: 2px solid var(--color-emas);
+    animation: acuan-mengembang 2.6s cubic-bezier(0.22, 0.6, 0.3, 1) infinite;
+}
+
+.titik-acuan .riak:nth-child(2) { animation-delay: 0.87s; }
+.titik-acuan .riak:nth-child(3) { animation-delay: 1.74s; }
+
+@keyframes acuan-mengembang {
+    from { scale: 1; opacity: 0.75; }
+    to   { scale: 5.4; opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .penanda-harga {
         transition: none;
+    }
+
+    .penanda-harga--memantul,
+    .titik-acuan .riak {
+        animation: none;
+    }
+
+    /* Riak yang berhenti tetap menyisakan satu lingkaran samar, supaya titik
+       acuan tetap terbaca berbeda dari penanda kos biasa. */
+    .titik-acuan .riak:first-of-type {
+        scale: 2.4;
+        opacity: 0.3;
     }
 }
 
@@ -176,9 +248,16 @@ h3 {
  * repeating-linear-gradient terbatas pada garis lurus; sulur dan rosette
  * butuh kurva, dan kurva hanya bisa digambar vektor.
  *
- * Tepi bawahnya dipotong miring, seperti pada referensi. Potongannya dangkal
- * saja: kartu filter yang mengambang di atasnya sudah memberi kesan berlapis,
- * dan sudut yang terlalu tajam akan memakan ruang baca.
+ * Dua sudut bawahnya dibulatkan 95px.
+ *
+ * Sebelumnya tepi bawah ini dipotong miring dengan clip-path. Keduanya tidak
+ * bisa dipakai bersamaan: clip-path memotong menurut poligonnya sendiri dan
+ * mengabaikan border-radius sepenuhnya, sehingga sudut yang dibulatkan tidak
+ * akan terlihat sama sekali selama potongan miring itu masih ada.
+ *
+ * Pembulatannya bekerja karena elemen pemakainya di Beranda.vue memasang
+ * overflow-hidden. Tanpa itu, motif sulur yang digambar sebagai lapisan
+ * absolut di dalamnya akan tetap terlihat menonjol melewati sudut.
  */
 .pita-mesh {
     background-color: #16233f;
@@ -187,7 +266,8 @@ h3 {
         radial-gradient(52% 72% at 88% 10%, rgba(158, 43, 43, 0.88) 0%, transparent 60%),
         radial-gradient(48% 64% at 74% 88%, rgba(200, 146, 42, 0.5) 0%, transparent 66%),
         radial-gradient(72% 92% at 30% 98%, rgba(31, 77, 61, 0.62) 0%, transparent 62%);
-    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 2.5rem), 0 100%);
+    border-bottom-left-radius: 95px;
+    border-bottom-right-radius: 95px;
 }
 
 /*
@@ -373,4 +453,37 @@ h3 {
 :focus-visible {
     outline: 2px solid var(--color-indigo-muda);
     outline-offset: 2px;
+}
+
+/*
+ * Sorot yang mengikuti kursor, untuk direktif v-sorot (resources/js/sorot.js).
+ *
+ * Lapisannya digambar di atas seluruh isi elemen, tetapi tidak menerima klik
+ * sama sekali — tanpa pointer-events: none, lapisan ini akan menelan setiap
+ * klik pada kartu dan tautan di dalamnya berhenti bekerja.
+ *
+ * Elemen yang memakainya harus berposisi relatif dan memotong isinya sendiri;
+ * pada KartuKos keduanya sudah ada.
+ */
+[data-sorot]::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 240ms ease;
+    background: radial-gradient(
+        200px circle at var(--sorot-x, 50%) var(--sorot-y, 50%),
+        var(--sorot-warna, rgba(200, 146, 42, 0.22)),
+        transparent 60%
+    );
+}
+
+[data-sorot]:hover::after {
+    opacity: 1;
+}
+
+[data-sorot='indigo'] {
+    --sorot-warna: rgba(40, 70, 127, 0.22);
 }

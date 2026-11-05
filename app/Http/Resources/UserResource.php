@@ -26,6 +26,9 @@ class UserResource extends JsonResource
             'role' => $this->role->value,
             'role_label' => $this->role->label(),
             'status_akun' => $this->status_akun->value,
+            'status_akun_label' => $this->status_akun->label(),
+            'alasan_nonaktif' => $this->alasan_nonaktif,
+            'status_diubah_pada' => $this->status_diubah_pada?->toIso8601String(),
             'terdaftar_pada' => $this->created_at?->toIso8601String(),
         ];
     }

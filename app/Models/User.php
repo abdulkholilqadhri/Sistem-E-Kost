@@ -40,6 +40,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'role' => RoleUser::class,
             'status_akun' => StatusAkun::class,
+            'status_diubah_pada' => 'datetime',
         ];
     }
 

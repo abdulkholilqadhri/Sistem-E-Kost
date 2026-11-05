@@ -46,7 +46,11 @@ class KosResource extends JsonResource
             'jumlah_ulasan' => $this->whenNotNull($this->ulasan_count),
 
             'foto' => FotoKosResource::collection($this->whenLoaded('foto')),
-            'pemilik' => new UserResource($this->whenLoaded('pemilik')),
+
+            // Sengaja bukan UserResource: endpoint detail kos terbuka untuk
+            // umum, sedangkan UserResource memuat surel dan status akun.
+            // Penjelasan lengkapnya ada di PemilikPublikResource.
+            'pemilik' => new PemilikPublikResource($this->whenLoaded('pemilik')),
         ];
     }
 }

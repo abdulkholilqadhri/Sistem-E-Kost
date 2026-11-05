@@ -17,6 +17,7 @@ const menuTerbuka = ref(false);
 const menu = computed(() => {
     if (auth.adalahAdmin) {
         return [
+            { nama: 'dashboard', label: 'Dashboard' },
             { nama: 'admin-pengajuan', label: 'Verifikasi' },
             { nama: 'beranda', label: 'Peta Kos' },
         ];
@@ -24,6 +25,7 @@ const menu = computed(() => {
 
     if (auth.adalahPemilik) {
         return [
+            { nama: 'dashboard', label: 'Dashboard' },
             { nama: 'pemilik-kos', label: 'Kos Saya' },
             { nama: 'pemilik-pesanan', label: 'Pesanan Masuk' },
             { nama: 'beranda', label: 'Peta Kos' },
@@ -33,8 +35,8 @@ const menu = computed(() => {
     if (auth.masuk) {
         return [
             { nama: 'beranda', label: 'Cari Kos' },
+            { nama: 'dashboard', label: 'Dashboard' },
             { nama: 'pesanan-saya', label: 'Pesanan Saya' },
-            { nama: 'jadi-pemilik', label: 'Jadi Pemilik' },
         ];
     }
 

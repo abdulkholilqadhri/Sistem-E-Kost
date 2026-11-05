@@ -68,7 +68,7 @@ onMounted(muat);
 </script>
 
 <template>
-    <div class="mx-auto max-w-2xl px-4 py-6">
+    <div class="mx-auto max-w-2xl">
         <h1 v-muncul:naik class="text-2xl font-semibold tracking-tight">Jadi Pemilik Kos</h1>
 
         <p v-if="auth.adalahPemilik" class="mt-4 rounded-lg border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-900">

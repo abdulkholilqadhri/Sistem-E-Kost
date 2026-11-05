@@ -72,6 +72,10 @@ $cangkangSpa = fn () => view('app', [
         ],
         'radius_default' => config('ekost.radius_default'),
         'radius_maksimum' => config('ekost.radius_maksimum'),
+
+        // Ditanam ke halaman agar formulir pemilik dan penyaring pencarian
+        // memakai ejaan yang sama persis. Penjelasannya di config/ekost.php.
+        'fasilitas' => config('ekost.fasilitas'),
     ],
 ]);
 

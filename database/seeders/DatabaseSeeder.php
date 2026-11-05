@@ -9,7 +9,6 @@ use App\Models\PengajuanPemilik;
 use App\Models\Ulasan;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -70,35 +69,84 @@ class DatabaseSeeder extends Seeder
     }
 
     /**
-     * @param  Collection<int, Kos>  $semuaKos
+     * @param  \Illuminate\Support\Collection<int, Kos>  $semuaKos
      */
     private function buatFoto($semuaKos): void
     {
-        if (! extension_loaded('gd')) {
+        $sumber = (string) config('ekost.foto_simulasi');
+
+        if ($sumber === 'tenun' && ! extension_loaded('gd')) {
             $this->command->warn('Ekstensi GD tidak aktif — foto kos dilewati.');
 
             return;
         }
 
         $disk = Storage::disk(config('ekost.disk_publik'));
+        $keterangan = ['Tampak depan', 'Kamar tidur', 'Kamar mandi'];
 
         foreach ($semuaKos as $kos) {
             foreach (range(0, 2) as $urutan) {
-                $path = "foto-kos/simulasi-{$kos->id}-{$urutan}.jpg";
-
-                $disk->put($path, $this->gambarTenun(
-                    $kos->nama_kos,
-                    ['Tampak depan', 'Kamar tidur', 'Kamar mandi'][$urutan],
-                    $kos->id + $urutan,
-                ));
+                /*
+                 * Dua jalur. Untuk 'tenun', gambarnya dibuat lalu disimpan ke
+                 * disk dan path relatifnya yang dicatat. Untuk sumber dari
+                 * internet, URL-nya langsung dicatat sebagai path_foto dan
+                 * diteruskan apa adanya oleh FotoKosResource.
+                 */
+                $path = $sumber === 'tenun'
+                    ? $this->simpanGambarTenun($disk, $kos, $urutan, $keterangan[$urutan])
+                    : $this->alamatFotoSimulasi($sumber, $kos->id, $urutan);
 
                 $kos->foto()->create([
                     'path_foto' => $path,
-                    'keterangan' => ['Tampak depan', 'Kamar tidur', 'Kamar mandi'][$urutan],
+                    'keterangan' => $keterangan[$urutan],
                     'urutan' => $urutan,
                 ]);
             }
         }
+
+        if ($sumber === 'picsum') {
+            $this->command->warn(
+                'Foto kos memakai picsum.photos — dimuat peramban langsung dari internet. '
+                .'Setel EKOST_FOTO_SIMULASI=ilustrasi bila demo berjalan tanpa koneksi.',
+            );
+        }
+    }
+
+    /**
+     * Alamat foto simulasi.
+     *
+     * Untuk 'ilustrasi', berkasnya sudah ada di public/foto-contoh — tiga
+     * adegan (tampak depan, kamar tidur, kamar mandi) dalam empat warna.
+     * Adegannya mengikuti urutan foto, warnanya mengikuti id kos, sehingga
+     * galeri satu kos tidak berisi tiga kamar tidur dan kartu-kartu di daftar
+     * tidak semuanya berwarna sama.
+     *
+     * Untuk 'picsum', kuncinya ditahan pada nilai tetap, bukan acak setiap
+     * permintaan. Tanpa itu, setiap muat ulang halaman mengganti seluruh foto
+     * — dan kartu yang gambarnya berganti-ganti terlihat rusak, bukan hidup.
+     */
+    private function alamatFotoSimulasi(string $sumber, int $kosId, int $urutan): string
+    {
+        if ($sumber === 'picsum') {
+            return 'https://picsum.photos/seed/ekost'.($kosId * 10 + $urutan).'/800/600';
+        }
+
+        $adegan = ['depan', 'kamar', 'mandi'][$urutan];
+        $warna = ($kosId % 4) + 1;
+
+        return "/foto-contoh/{$adegan}-{$warna}.svg";
+    }
+
+    /**
+     * @param  \Illuminate\Contracts\Filesystem\Filesystem  $disk
+     */
+    private function simpanGambarTenun($disk, Kos $kos, int $urutan, string $keterangan): string
+    {
+        $path = "foto-kos/simulasi-{$kos->id}-{$urutan}.jpg";
+
+        $disk->put($path, $this->gambarTenun($kos->nama_kos, $keterangan, $kos->id + $urutan));
+
+        return $path;
     }
 
     /**
@@ -179,8 +227,8 @@ class DatabaseSeeder extends Seeder
      * Pemesanan pada beberapa tahap sekaligus, supaya setiap layar punya
      * sesuatu untuk ditampilkan tanpa harus menjalani seluruh alur dari awal.
      *
-     * @param  Collection<int, Kos>  $kosUtama
-     * @param  Collection<int, User>  $penyewaLain
+     * @param  \Illuminate\Support\Collection<int, Kos>  $kosUtama
+     * @param  \Illuminate\Support\Collection<int, User>  $penyewaLain
      */
     private function buatPemesanan($kosUtama, User $penyewaUtama, $penyewaLain): void
     {
@@ -224,8 +272,8 @@ class DatabaseSeeder extends Seeder
      * dengan aplikasinya: setiap ulasan dibuatkan pemesanan selesai miliknya
      * sendiri, bukan ditempelkan sembarangan.
      *
-     * @param  Collection<int, Kos>  $kosUtama
-     * @param  Collection<int, User>  $penyewaLain
+     * @param  \Illuminate\Support\Collection<int, Kos>  $kosUtama
+     * @param  \Illuminate\Support\Collection<int, User>  $penyewaLain
      */
     private function buatUlasan($kosUtama, $penyewaLain): void
     {

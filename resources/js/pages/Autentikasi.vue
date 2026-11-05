@@ -2,6 +2,7 @@
 import { onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { galatKolom, pesanGalat } from '../api';
+import TepiCahaya from '../components/TepiCahaya.vue';
 import { useAuth } from '../stores/auth';
 
 /**
@@ -54,7 +55,16 @@ async function kirimMasuk() {
 
     try {
         await auth.login(formMasuk);
-        router.push(route.query.lanjut ?? { name: 'beranda' });
+
+        /*
+         * Setelah masuk, tujuannya dashboard — bukan beranda.
+         *
+         * SRS UC-02 dan NFR-03.2 keduanya menyebut dasbor sebagai halaman
+         * yang muncul setelah login berhasil. Kalau pengguna tadi dialihkan
+         * ke sini dari halaman lain, query 'lanjut' tetap menang: ia sedang
+         * menuju suatu tempat, dan dasbor akan memotong jalannya.
+         */
+        router.push(route.query.lanjut ?? { name: 'dashboard' });
     } catch (error) {
         galatMasuk.value = pesanGalat(error, 'Gagal masuk.');
     } finally {
@@ -69,7 +79,7 @@ async function kirimDaftar() {
 
     try {
         await auth.registrasi(formDaftar);
-        router.push({ name: 'beranda' });
+        router.push({ name: 'dashboard' });
     } catch (error) {
         galatDaftar.value = pesanGalat(error, 'Pendaftaran gagal.');
         galatKolomDaftar.value = galatKolom(error);
@@ -116,9 +126,18 @@ onMounted(() => {
         <!-- Kartunya naik sekali saat halaman dibuka. Tirai yang bergeser
              antara Masuk dan Daftar adalah animasi lain yang menjawab klik
              pengguna, dan keduanya tidak bertabrakan: yang satu sekali di
-             awal, yang satu setiap kali panelnya ditukar. -->
-        <div
+             awal, yang satu setiap kali panelnya ditukar.
+
+             Tepi bercahaya adalah gerak ketiga, dan satu-satunya yang berjalan
+             terus-menerus. Di halaman ini ia tidak bersaing dengan apa pun:
+             hanya ada satu kartu, dan cahayanya justru menunjukkan ke mana
+             mata harus pergi begitu halaman terbuka. -->
+        <TepiCahaya
             v-muncul="{ nama: 'naik', jeda: 180 }"
+            class="bingkai-kotak"
+            jari="12px"
+        >
+        <div
             class="kotak"
             :class="{ 'panel-kanan-aktif': panelKananAktif }"
         >
@@ -221,6 +240,7 @@ onMounted(() => {
                 </div>
             </div>
         </div>
+        </TepiCahaya>
 
         <!--
             Penggantian form untuk layar kecil.
@@ -256,6 +276,7 @@ onMounted(() => {
  */
 
 .halaman-auth {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -264,6 +285,83 @@ onMounted(() => {
        supaya halaman ini tidak menghasilkan gulir vertikal yang tidak perlu. */
     min-height: calc(100vh - 11rem);
     padding: 2rem 1rem 3rem;
+}
+
+/*
+ * LATAR HALAMAN
+ *
+ * Majene kota pesisir, dan kampus yang jadi titik acuan seluruh pencarian di
+ * aplikasi ini menghadap Teluk Mandar. Latar halaman ini mengambil dari sana:
+ * cahaya pagi di atas, air di bawah, pasir di tepinya.
+ *
+ * Tiga lapis, masing-masing position: fixed supaya menutup seluruh layar.
+ * Halaman ini lebih pendek daripada layar, sehingga latar seluas isinya saja
+ * akan menyisakan pita polos di bagian atas, tepat di belakang bilah navigasi
+ * yang melayang.
+ *
+ *   1. Semburat warna — hijau laut, biru langit, dan pasir. Lebar dan lembut,
+ *      pada kepekatan rendah: halaman ini hanya berisi satu kartu, dan
+ *      kartunya yang harus dilihat lebih dulu.
+ *   2. Gelombang — tiga lapis lengkung yang bertumpuk di kaki layar. Lengkung
+ *      yang tidak sejajar inilah yang membuatnya terbaca sebagai air, bukan
+ *      sebagai pita gradien biasa.
+ *   3. Butiran — bising halus yang menghapus pita-pita gradasi yang muncul
+ *      pada layar 8-bit, sekaligus memberi kesan kertas alih-alih kaca.
+ */
+.halaman-auth::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-color: #f1f6f6;
+    background-image:
+        radial-gradient(62% 54% at 10% 0%, rgba(42, 142, 134, 0.26) 0%, transparent 62%),
+        radial-gradient(52% 48% at 92% 4%, rgba(123, 180, 212, 0.26) 0%, transparent 64%),
+        radial-gradient(58% 50% at 96% 72%, rgba(200, 146, 42, 0.16) 0%, transparent 62%),
+        radial-gradient(64% 52% at 4% 88%, rgba(31, 77, 61, 0.14) 0%, transparent 62%);
+}
+
+.halaman-auth::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+        url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201440%20340'%20preserveAspectRatio='none'%3E%3Cpath%20d='M0,186%20C190,124%20350,228%20548,198%20C742,168%20884,92%201086,120%20C1232,140%201338,190%201440,166%20L1440,340%20L0,340%20Z'%20fill='rgba(126,196,214,0.26)'/%3E%3Cpath%20d='M0,244%20C168,200%20338,274%20530,250%20C742,224%20906,156%201104,182%20C1252,201%201352,242%201440,226%20L1440,340%20L0,340%20Z'%20fill='rgba(44,146,138,0.22)'/%3E%3Cpath%20d='M0,300%20C210,272%20372,318%20580,306%20C790,294%20952,250%201152,268%20C1286,280%201372,302%201440,294%20L1440,340%20L0,340%20Z'%20fill='rgba(26,92,88,0.18)'/%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='200'%20height='200'%3E%3Cfilter%20id='b'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.9'%20numOctaves='3'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='200'%20height='200'%20filter='url(%2523b)'%20opacity='0.045'/%3E%3C/svg%3E");
+    background-repeat: no-repeat, repeat;
+    background-position: bottom center, 0 0;
+    background-size: 100% 38vh, 200px 200px;
+}
+
+/* Butiran dimatikan pada layar yang meminta pengurangan gerak sekaligus
+   pengurangan rangsang visual. Bising halus mengganggu sebagian pembaca. */
+@media (prefers-reduced-motion: reduce) {
+    .halaman-auth::after {
+        background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201440%20340'%20preserveAspectRatio='none'%3E%3Cpath%20d='M0,186%20C190,124%20350,228%20548,198%20C742,168%20884,92%201086,120%20C1232,140%201338,190%201440,166%20L1440,340%20L0,340%20Z'%20fill='rgba(126,196,214,0.26)'/%3E%3Cpath%20d='M0,244%20C168,200%20338,274%20530,250%20C742,224%20906,156%201104,182%20C1252,201%201352,242%201440,226%20L1440,340%20L0,340%20Z'%20fill='rgba(44,146,138,0.22)'/%3E%3Cpath%20d='M0,300%20C210,272%20372,318%20580,306%20C790,294%20952,250%201152,268%20C1286,280%201372,302%201440,294%20L1440,340%20L0,340%20Z'%20fill='rgba(26,92,88,0.18)'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-size: 100% 38vh;
+    }
+}
+
+/* Seluruh isi halaman diangkat di atas kedua lapisan latar. Tanpa ini,
+   lapisan fixed tadi menutupi kartu dan tautannya. */
+.atas-auth,
+.lambang-auth,
+.bingkai-kotak,
+.ganti-ponsel {
+    position: relative;
+    z-index: 1;
+}
+
+/* Bayangan pindah ke bingkainya. Pada .kotak ia akan jatuh di bawah tepi
+   bercahaya dan tidak terlihat sama sekali. */
+.bingkai-kotak {
+    box-shadow:
+        0 14px 28px rgba(22, 35, 63, 0.22),
+        0 10px 10px rgba(22, 35, 63, 0.18);
 }
 
 .atas-auth {
@@ -398,6 +496,14 @@ onMounted(() => {
     border-color: var(--color-indigo-muda);
 }
 
+/*
+ * Tombol kirim selebar kolom isiannya.
+ *
+ * Aslinya tombol ini menyusut mengikuti teksnya dan diletakkan di tengah,
+ * sehingga tepi kiri dan kanannya tidak bertemu dengan tepi kotak isian di
+ * atasnya. Satu kolom dengan tiga lebar berbeda terbaca sebagai kesalahan
+ * penataan, bukan sebagai pilihan.
+ */
 .wadah-form button {
     border-radius: 999px;
     border: 1px solid var(--color-indigo);
@@ -408,6 +514,7 @@ onMounted(() => {
     padding: 0.8rem 2.8rem;
     letter-spacing: 1px;
     text-transform: uppercase;
+    width: 100%;
     margin-top: 1.25rem;
     transition: transform 80ms ease-in, background-color 150ms ease;
 }

@@ -97,7 +97,7 @@ onMounted(muat);
 </script>
 
 <template>
-    <div class="mx-auto max-w-3xl px-4 py-6">
+    <div class="mx-auto max-w-3xl">
         <h1 v-muncul:naik class="text-2xl font-semibold tracking-tight">Pesanan Masuk</h1>
         <p v-muncul="{ nama: 'naik', jeda: 90 }" class="mt-1 text-sm text-stone-600">
             Terima atau tolak pesanan, lalu verifikasi bukti transfer yang dikirim penyewa.

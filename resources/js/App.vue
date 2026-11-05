@@ -1,11 +1,43 @@
 <script setup>
-import { onMounted } from 'vue';
+import { computed, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import Toast from 'primevue/toast';
 import IndikatorMuat from './components/IndikatorMuat.vue';
 import NavBar from './components/NavBar.vue';
+import PitaUlasan from './components/PitaUlasan.vue';
 import { useAuth } from './stores/auth';
 
 const auth = useAuth();
+const rute = useRoute();
+
+/**
+ * Dua tata letak, dipilih oleh rutenya sendiri.
+ *
+ * Halaman publik memakai bilah navigasi atas; halaman yang memerlukan login
+ * memakai cangkang sidebar (CangkangPeran.vue). Pembagian ini mengikuti SDD
+ * BAB IV, yang memang menggambarkan keduanya — bilah atas pada mockup
+ * pencarian (hal. 59), sidebar pada mockup pembayaran dan dasbor admin
+ * (hal. 61 dan 62).
+ *
+ * Cangkang membawa bilah atas, navigasi, dan kakinya sendiri, jadi ketiganya
+ * dilepas di sini supaya tidak tertumpuk.
+ */
+const pakaiCangkang = computed(() => rute.meta.cangkang === true);
+
+/**
+ * Pita ulasan hanya tampil di halaman publik yang memang untuk dijelajahi.
+ *
+ * Dua tempat sengaja dikecualikan. Halaman masuk dan daftar punya tata
+ * letaknya sendiri setinggi layar, dan pita di bawahnya hanya menambah gulir
+ * pada halaman yang seharusnya selesai dalam satu layar. Halaman 404 juga
+ * dilewati: orang yang tersesat sedang mencari jalan keluar, bukan sedang
+ * membaca ulasan.
+ */
+const tampilkanPita = computed(
+    () => ! pakaiCangkang.value
+        && rute.meta.tamuSaja !== true
+        && rute.name !== 'tidak-ditemukan',
+);
 
 onMounted(() => auth.periksaSesi());
 </script>
@@ -14,7 +46,7 @@ onMounted(() => auth.periksaSesi());
     <div class="flex min-h-screen flex-col">
         <IndikatorMuat />
 
-        <NavBar />
+        <NavBar v-if="!pakaiCangkang" />
 
         <!--
             Ruang untuk bilah navigasi yang melayang.
@@ -22,8 +54,11 @@ onMounted(() => auth.periksaSesi());
             sendiri. Ruang itu diberikan sekali di sini, bukan di setiap
             halaman — supaya halaman baru tidak pernah lupa menyediakannya
             dan isinya tertutup bilah.
+
+            Halaman bercangkang tidak membutuhkannya: bilah atasnya ikut
+            mengalir bersama isi, bukan melayang di atasnya.
         -->
-        <main class="flex-1 pt-20 sm:pt-24">
+        <main class="flex-1" :class="! pakaiCangkang && 'pt-20 sm:pt-24'">
             <RouterView v-slot="{ Component, route }">
                 <!--
                     Satu transisi singkat yang menjawab perpindahan halaman.
@@ -45,7 +80,12 @@ onMounted(() => auth.periksaSesi());
             </RouterView>
         </main>
 
-        <footer class="border-t border-[color:var(--color-garis)] bg-white px-4 py-6 text-center text-sm text-[color:var(--color-tinta)]/60">
+        <PitaUlasan v-if="tampilkanPita" />
+
+        <footer
+            v-if="!pakaiCangkang"
+            class="border-t border-[color:var(--color-garis)] bg-white px-4 py-6 text-center text-sm text-[color:var(--color-tinta)]/60"
+        >
             <p>E-Kost &mdash; pencarian kos berbasis lokasi di sekitar Universitas Sulawesi Barat</p>
             <p class="mt-1">
                 Data peta oleh

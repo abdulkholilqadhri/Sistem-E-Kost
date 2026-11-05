@@ -34,6 +34,18 @@ class CariKosRequest extends FormRequest
             'tipe_kos' => ['nullable', Rule::enum(TipeKos::class)],
             'harga_min' => ['nullable', 'integer', 'min:0'],
             'harga_maks' => ['nullable', 'integer', 'min:0', 'gte:harga_min'],
+
+            /*
+             * Fasilitas dibatasi pada daftar baku di config/ekost.php.
+             *
+             * Tanpa Rule::in, klien dapat mengirim nilai apa pun dan
+             * penyaringnya akan mengembalikan hasil kosong tanpa penjelasan.
+             * Dengan Rule::in, kesalahan ejaan dijawab sebagai galat validasi
+             * yang menyebutkan masalahnya.
+             */
+            'fasilitas' => ['nullable', 'array', 'max:10'],
+            'fasilitas.*' => [Rule::in(config('ekost.fasilitas'))],
+
             'q' => ['nullable', 'string', 'max:100'],
             'per_halaman' => ['nullable', 'integer', 'between:1,50'],
         ];
@@ -72,7 +84,7 @@ class CariKosRequest extends FormRequest
     }
 
     /**
-     * @return array{tipe_kos: ?string, harga_min: ?int, harga_maks: ?int, q: ?string}
+     * @return array{tipe_kos: ?string, harga_min: ?int, harga_maks: ?int, fasilitas: array<int, string>, q: ?string}
      */
     public function filter(): array
     {
@@ -80,6 +92,7 @@ class CariKosRequest extends FormRequest
             'tipe_kos' => $this->input('tipe_kos'),
             'harga_min' => $this->integer('harga_min') ?: null,
             'harga_maks' => $this->integer('harga_maks') ?: null,
+            'fasilitas' => array_values(array_filter((array) $this->input('fasilitas', []))),
             'q' => $this->input('q'),
         ];
     }

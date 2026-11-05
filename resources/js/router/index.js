@@ -1,7 +1,22 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { mulaiMuat, selesaiMuat } from '../indikatorMuat';
 import { useAuth } from '../stores/auth';
+import CangkangPeran from '../components/CangkangPeran.vue';
 
+/*
+ * Dua kelompok rute dengan dua tata letak, mengikuti SDD BAB IV.
+ *
+ * Kelompok pertama adalah halaman publik: beranda, detail kos, autentikasi.
+ * Semuanya memakai bilah navigasi atas seperti pada mockup pencarian.
+ *
+ * Kelompok kedua bersarang di dalam CangkangPeran — sidebar kiri seperti
+ * pada mockup pembayaran dan dasbor admin. Cangkangnya dimuat biasa, bukan
+ * malas: ia dipakai semua halaman yang memerlukan login, sehingga memecahnya
+ * ke berkas terpisah hanya menambah satu permintaan tanpa menghemat apa pun.
+ *
+ * meta diwariskan dari induk ke anak, jadi cangkang: true dan
+ * perluMasuk: true cukup ditulis sekali di induknya.
+ */
 const rute = [
     {
         path: '/',
@@ -34,52 +49,94 @@ const rute = [
         component: () => import('../pages/Autentikasi.vue'),
         meta: { tamuSaja: true, kunci: 'auth' },
     },
+    /*
+     * Area yang memerlukan login. Seluruhnya memakai cangkang sidebar.
+     *
+     * meta.kunci disamakan untuk semua anaknya supaya RouterView di App.vue
+     * tidak membongkar-pasang cangkangnya setiap kali berpindah halaman di
+     * dalamnya — kalau itu terjadi, sidebar akan berkedip dan laci yang
+     * sedang terbuka akan tertutup sendiri.
+     *
+     * meta.judul mengisi remah-remah di bilah atas cangkang.
+     */
     {
-        path: '/pesanan-saya',
-        name: 'pesanan-saya',
-        component: () => import('../pages/PesananSaya.vue'),
-        meta: { perluMasuk: true },
-    },
-    {
-        path: '/jadi-pemilik',
-        name: 'jadi-pemilik',
-        component: () => import('../pages/JadiPemilik.vue'),
-        meta: { perluMasuk: true },
-    },
+        path: '/',
+        component: CangkangPeran,
+        meta: { perluMasuk: true, cangkang: true, kunci: 'cangkang' },
+        children: [
+            {
+                path: 'dashboard',
+                name: 'dashboard',
+                component: () => import('../pages/Dashboard.vue'),
+                meta: { judul: 'Dashboard' },
+            },
+            {
+                path: 'pesanan-saya',
+                name: 'pesanan-saya',
+                component: () => import('../pages/PesananSaya.vue'),
+                meta: { judul: 'Pemesanan Saya' },
+            },
+            {
+                path: 'pembayaran',
+                name: 'pembayaran',
+                component: () => import('../pages/Pembayaran.vue'),
+                meta: { judul: 'Pembayaran' },
+            },
+            {
+                path: 'pembayaran/:id',
+                name: 'pembayaran-detail',
+                component: () => import('../pages/PembayaranDetail.vue'),
+                props: true,
+                meta: { judul: 'Pembayaran' },
+            },
+            {
+                path: 'jadi-pemilik',
+                name: 'jadi-pemilik',
+                component: () => import('../pages/JadiPemilik.vue'),
+                meta: { judul: 'Jadi Pemilik' },
+            },
 
-    // Pemilik kos
-    {
-        path: '/pemilik/kos',
-        name: 'pemilik-kos',
-        component: () => import('../pages/pemilik/KosSaya.vue'),
-        meta: { perluMasuk: true, peran: ['pemilik', 'admin'] },
-    },
-    {
-        path: '/pemilik/kos/baru',
-        name: 'pemilik-kos-baru',
-        component: () => import('../pages/pemilik/FormKos.vue'),
-        meta: { perluMasuk: true, peran: ['pemilik', 'admin'] },
-    },
-    {
-        path: '/pemilik/kos/:id/ubah',
-        name: 'pemilik-kos-ubah',
-        component: () => import('../pages/pemilik/FormKos.vue'),
-        props: true,
-        meta: { perluMasuk: true, peran: ['pemilik', 'admin'] },
-    },
-    {
-        path: '/pemilik/pesanan',
-        name: 'pemilik-pesanan',
-        component: () => import('../pages/pemilik/PesananMasuk.vue'),
-        meta: { perluMasuk: true, peran: ['pemilik', 'admin'] },
-    },
+            // Pemilik kos
+            {
+                path: 'pemilik/kos',
+                name: 'pemilik-kos',
+                component: () => import('../pages/pemilik/KosSaya.vue'),
+                meta: { peran: ['pemilik', 'admin'], judul: 'Kos Saya' },
+            },
+            {
+                path: 'pemilik/kos/baru',
+                name: 'pemilik-kos-baru',
+                component: () => import('../pages/pemilik/FormKos.vue'),
+                meta: { peran: ['pemilik', 'admin'], judul: 'Tambah Kos' },
+            },
+            {
+                path: 'pemilik/kos/:id/ubah',
+                name: 'pemilik-kos-ubah',
+                component: () => import('../pages/pemilik/FormKos.vue'),
+                props: true,
+                meta: { peran: ['pemilik', 'admin'], judul: 'Ubah Data Kos' },
+            },
+            {
+                path: 'pemilik/pesanan',
+                name: 'pemilik-pesanan',
+                component: () => import('../pages/pemilik/PesananMasuk.vue'),
+                meta: { peran: ['pemilik', 'admin'], judul: 'Pesanan Masuk' },
+            },
 
-    // Admin
-    {
-        path: '/admin/pengajuan',
-        name: 'admin-pengajuan',
-        component: () => import('../pages/admin/VerifikasiPengajuan.vue'),
-        meta: { perluMasuk: true, peran: ['admin'] },
+            // Admin
+            {
+                path: 'admin/pengguna',
+                name: 'admin-pengguna',
+                component: () => import('../pages/admin/KelolaPengguna.vue'),
+                meta: { peran: ['admin'], judul: 'Kelola Pengguna' },
+            },
+            {
+                path: 'admin/pengajuan',
+                name: 'admin-pengajuan',
+                component: () => import('../pages/admin/VerifikasiPengajuan.vue'),
+                meta: { peran: ['admin'], judul: 'Verifikasi Pengajuan' },
+            },
+        ],
     },
 
     {

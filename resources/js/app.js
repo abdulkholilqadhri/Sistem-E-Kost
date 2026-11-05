@@ -7,6 +7,8 @@ import Tooltip from 'primevue/tooltip';
 import router from './router';
 import tema from './theme';
 import { muncul } from './animasi';
+import { sorot } from './sorot';
+import { magnet } from './magnet';
 import App from './App.vue';
 
 const aplikasi = createApp(App)
@@ -16,7 +18,9 @@ const aplikasi = createApp(App)
     .use(ToastService)
     .use(ConfirmationService)
     .directive('tooltip', Tooltip)
-    .directive('muncul', muncul);
+    .directive('muncul', muncul)
+    .directive('sorot', sorot)
+    .directive('magnet', magnet);
 
 aplikasi.mount('#app');
 

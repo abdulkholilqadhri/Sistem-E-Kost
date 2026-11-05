@@ -42,6 +42,27 @@ class PemesananResource extends JsonResource
             'kos' => new KosResource($this->whenLoaded('kos')),
             'penyewa' => new UserResource($this->whenLoaded('penyewa')),
             'pembayaran' => new PembayaranResource($this->whenLoaded('pembayaran')),
+
+            /*
+             * Kontak pemilik untuk halaman pembayaran.
+             *
+             * Sistem ini tidak memegang uang: transfer dilakukan langsung ke
+             * pemilik kos dan sistem hanya mencatat buktinya. Penyewa karena
+             * itu perlu cara menghubungi pemiliknya untuk menanyakan nomor
+             * rekening tujuan.
+             *
+             * Nomor telepon hanya muncul di sini, tidak di detail kos yang
+             * terbuka untuk umum: yang membaca ini sudah punya pesanan di kos
+             * tersebut, dan PemesananPolicy sudah memastikan ia pihak yang
+             * berhak atas pesanan itu.
+             */
+            'kontak_pemilik' => $this->when(
+                $this->relationLoaded('kos') && $this->kos?->relationLoaded('pemilik'),
+                fn () => [
+                    'nama' => $this->kos->pemilik?->name,
+                    'no_hp' => $this->kos->pemilik?->no_hp,
+                ],
+            ),
         ];
     }
 }

@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\PenggunaController;
 use App\Http\Controllers\Api\Admin\VerifikasiPengajuanController;
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\FotoKosController;
 use App\Http\Controllers\Api\GeocodingController;
 use App\Http\Controllers\Api\KosController;
@@ -67,6 +69,12 @@ Route::get('/kos/{kos}/ulasan', [UlasanController::class, 'index'])->name('kos.u
 Route::get('/ulasan/terbaru', [UlasanController::class, 'terbaru'])->name('ulasan.terbaru');
 
 Route::middleware(['auth:sanctum', 'akun.aktif'])->group(function () {
+
+    /*
+     * FR-03 — Dashboard. Satu endpoint untuk ketiga peran; isinya ditentukan
+     * oleh peran pemanggil, bukan oleh parameter permintaan.
+     */
+    Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
     /*
      * FR-14 — Pengajuan menjadi pemilik kos, sisi pemohon.
@@ -157,6 +165,17 @@ Route::middleware(['auth:sanctum', 'akun.aktif'])->group(function () {
             ->name('pengajuan-pemilik.dokumen');
         Route::post('/pengajuan-pemilik/{pengajuan}/verifikasi', [VerifikasiPengajuanController::class, 'verifikasi'])
             ->name('pengajuan-pemilik.verifikasi');
+
+        /*
+         * FR-16 — Pengelolaan akun pengguna.
+         *
+         * Hanya status aktif yang dapat diubah. Peran tidak: kenaikan menjadi
+         * pemilik kos punya jalurnya sendiri lewat FR-14 dan FR-15.
+         */
+        Route::get('/pengguna', [PenggunaController::class, 'index'])
+            ->name('pengguna.index');
+        Route::post('/pengguna/{pengguna}/status', [PenggunaController::class, 'ubahStatus'])
+            ->name('pengguna.status');
     });
 
 });

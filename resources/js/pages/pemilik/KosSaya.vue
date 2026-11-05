@@ -86,7 +86,7 @@ onMounted(muat);
 </script>
 
 <template>
-    <div class="mx-auto max-w-4xl px-4 py-6">
+    <div class="mx-auto max-w-4xl">
         <div v-muncul:naik class="mb-6 flex flex-wrap items-center justify-between gap-3">
             <div>
                 <h1 class="text-2xl font-semibold tracking-tight">Kos Saya</h1>

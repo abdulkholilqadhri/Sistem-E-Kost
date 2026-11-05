@@ -56,7 +56,10 @@ class PemesananController extends Controller
 
         $this->authorize('view', $pemesanan);
 
-        return new PemesananResource($pemesanan->load(['kos.foto', 'penyewa', 'pembayaran']));
+        // kos.pemilik dimuat agar halaman pembayaran dapat menampilkan kontak
+        // pemiliknya. Yang diserialisasi hanya nama dan nomor telepon; lihat
+        // kontak_pemilik di PemesananResource.
+        return new PemesananResource($pemesanan->load(['kos.foto', 'kos.pemilik', 'penyewa', 'pembayaran']));
     }
 
     public function store(AjukanPemesananRequest $request): JsonResponse

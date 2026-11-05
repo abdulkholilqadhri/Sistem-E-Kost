@@ -1,5 +1,5 @@
 <script setup>
-import { nextTick, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import Button from 'primevue/button';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
@@ -30,9 +30,51 @@ const acuan = ref(
 const filter = reactive({
     radius: konfigurasi.radius_default ?? 1000,
     tipe_kos: null,
+    harga_min: null,
     harga_maks: null,
+    fasilitas: [],
     q: '',
 });
+
+/*
+ * Pilihan fasilitas datang dari server, sama dengan yang dipakai formulir
+ * pemilik. Penjelasannya di config/ekost.php.
+ */
+const fasilitasPilihan = konfigurasi.fasilitas ?? [];
+
+// Panel penyaring lanjutan tertutup pada awalnya. Mockup menampilkannya
+// terbuka, tetapi di sana isinya statis; di sini ia mendorong daftar hasil
+// jauh ke bawah pada layar ponsel, dan yang dicari orang adalah hasilnya.
+const filterTerbuka = ref(false);
+
+function alihkanFasilitas(nama) {
+    const posisi = filter.fasilitas.indexOf(nama);
+
+    if (posisi === -1) {
+        filter.fasilitas.push(nama);
+    } else {
+        filter.fasilitas.splice(posisi, 1);
+    }
+
+    cari();
+}
+
+function bersihkanFilter() {
+    filter.tipe_kos = null;
+    filter.harga_min = null;
+    filter.harga_maks = null;
+    filter.fasilitas = [];
+    filter.q = '';
+    cari();
+}
+
+const adaFilterAktif = computed(() =>
+    filter.tipe_kos !== null
+    || filter.harga_min !== null
+    || filter.harga_maks !== null
+    || filter.fasilitas.length > 0
+    || filter.q !== '',
+);
 
 const pilihanTipe = [
     { label: 'Semua', value: null },
@@ -46,6 +88,61 @@ const pilihanTipe = [
 const pilihanRadius = [500, 1000, 2000, 5000];
 
 const daftarKos = ref([]);
+
+/**
+ * Tiga kos bernilai terbaik dalam hasil pencarian saat ini.
+ *
+ * "Terbaik" di sini berarti rating tinggi pada harga rendah — dua hal yang
+ * tidak bisa dibandingkan langsung, karena rating berskala 1 sampai 5
+ * sedangkan harga ratusan ribu sampai jutaan. Keduanya disetarakan dulu ke
+ * rentang 0 sampai 1 terhadap hasil pencarian yang sedang tampil, lalu
+ * dijumlahkan dengan bobot sama.
+ *
+ * Penyetaraannya memakai hasil yang sedang tampil, bukan seluruh basis data.
+ * "Termurah" pada radius 500 m memang harus berarti termurah di antara yang
+ * muat di radius itu — bukan termurah se-Majene, yang bisa saja berada jauh
+ * di luar jangkauan jalan kaki.
+ *
+ * DUA SYARAT YANG MENGGUGURKAN
+ *
+ * Kos tanpa satu pun ulasan tidak ikut dinilai. Tanpa itu, kos yang baru
+ * didaftarkan dan belum pernah ditinggali siapa pun akan menang hanya karena
+ * harganya murah, dan sorotan ini justru menyesatkan.
+ *
+ * Kos yang kamarnya penuh juga digugurkan. Merekomendasikan kamar yang tidak
+ * bisa dipesan hanya membuang waktu orang yang mengkliknya.
+ */
+const idUnggulan = computed(() => {
+    const layak = daftarKos.value.filter(
+        (kos) => kos.tersedia && (kos.jumlah_ulasan ?? 0) > 0,
+    );
+
+    if (layak.length === 0) {
+        return new Set();
+    }
+
+    const harga = layak.map((kos) => kos.harga_per_bulan ?? 0);
+    const termurah = Math.min(...harga);
+    const termahal = Math.max(...harga);
+
+    // Bila seluruhnya seharga sama, sisi harga tidak membedakan apa pun dan
+    // penilaiannya jatuh sepenuhnya pada rating.
+    const rentang = termahal - termurah;
+
+    const bernilai = layak
+        .map((kos) => {
+            const nilaiRating = (kos.rating_rata ?? 0) / 5;
+            const nilaiHarga = rentang === 0
+                ? 1
+                : (termahal - (kos.harga_per_bulan ?? 0)) / rentang;
+
+            return { id: kos.id, nilai: nilaiRating * 0.5 + nilaiHarga * 0.5 };
+        })
+        .sort((a, b) => b.nilai - a.nilai)
+        .slice(0, 3);
+
+    return new Set(bernilai.map((satu) => satu.id));
+});
 const memuat = ref(true);
 const kosTersorot = ref(null);
 const menungguLokasi = ref(false);
@@ -78,7 +175,9 @@ async function cari() {
                 lng: acuan.value.lng,
                 radius: filter.radius,
                 tipe_kos: filter.tipe_kos ?? undefined,
+                harga_min: filter.harga_min ?? undefined,
                 harga_maks: filter.harga_maks ?? undefined,
+                fasilitas: filter.fasilitas.length ? filter.fasilitas : undefined,
                 q: filter.q || undefined,
                 per_halaman: 24,
             },
@@ -189,6 +288,7 @@ function cariTertunda(jeda) {
 
 watch(() => filter.radius, () => cariTertunda(400));
 watch(() => filter.q, () => cariTertunda(600));
+watch(() => filter.harga_min, () => cariTertunda(600));
 watch(() => filter.harga_maks, () => cariTertunda(600));
 
 onMounted(cari);
@@ -215,7 +315,19 @@ onMounted(cari);
             <!-- Isi pita sengaja tidak ikut dilebarkan sampai 1600 px:
                  paragraf sepanjang itu melelahkan dibaca. Yang melebar hanya
                  latarnya, yang memang membentang penuh. -->
-            <div class="relative z-10 mx-auto max-w-6xl px-4 pt-26 pb-16 text-center sm:pt-30 sm:pb-20">
+            <!--
+                Jarak bawah pita dan tarikan ke atas kartu pencarian berubah
+                bersama-sama, selisihnya tetap.
+
+                Pita menutupi kartu sedalam nilai tarikan kartunya. Menambah
+                tarikan saja akan membuat pita naik menutupi deretan pil
+                radius; menambah jarak bawah pita saja hanya membuat pitanya
+                lebih tinggi tanpa menutupi apa pun. Keduanya dinaikkan dengan
+                angka yang sama, sehingga jarak antara pil radius dan tepi
+                atas kartu tidak berubah sedikit pun — 32px di layar lebar,
+                16px di ponsel.
+            -->
+            <div class="relative z-10 mx-auto max-w-6xl px-4 pt-26 pb-24 text-center sm:pt-30 sm:pb-[8.5rem]">
                 <!-- Judul disingkap dari bawah ke atas, seperti pita yang
                      digulung terbuka. Gerakan itu dipakai hanya di sini:
                      satu gerakan yang berbeda pada satu elemen terpenting
@@ -290,10 +402,17 @@ onMounted(cari);
                 referensi. Efeknya bukan sekadar hiasan: ia menandai bahwa
                 alat pencarian adalah bagian dari pita atas, bukan baris
                 penyaring biasa di atas daftar.
+
+                Sudut atasnya dibuat lebih besar daripada sudut bawahnya.
+                Dua sudut atas itulah yang terlihat naik menimpa pita, dan
+                lengkung yang lebih lebar di sana membuat bidang putih ini
+                terbaca sebagai permukaan yang muncul dari balik pita —
+                bukan sebagai kotak yang kebetulan ditempelkan di atasnya.
+                Sudut bawahnya tetap 12px, sama dengan kartu kos.
             -->
             <section
                 v-muncul="{ nama: 'naik', jeda: 240 }"
-                class="relative z-10 -mt-12 bg-white p-4 shadow-[0_24px_50px_-20px_rgba(22,35,63,0.5)] sm:p-5"
+                class="relative z-10 -mt-20 rounded-t-[20px] rounded-b-xl bg-white p-4 shadow-[0_24px_50px_-20px_rgba(22,35,63,0.5)] sm:-mt-26 sm:p-5"
                 aria-label="Pencarian kos"
             >
                 <div class="grid gap-4 lg:grid-cols-[1fr_auto]">
@@ -309,19 +428,39 @@ onMounted(cari);
                             />
                         </IconField>
 
-                        <InputNumber
-                            v-model="filter.harga_maks"
-                            mode="currency"
-                            currency="IDR"
-                            locale="id-ID"
-                            :max-fraction-digits="0"
-                            :step="100000"
-                            placeholder="Harga maksimum"
-                            class="w-full"
-                            size="large"
-                            input-class="w-full"
-                            aria-label="Harga maksimum per bulan"
-                        />
+                        <!-- Rentang harga, mengikuti mockup hal. 59 yang
+                             memberi batas bawah dan batas atas. Sebelumnya
+                             hanya ada batas atas, sehingga orang yang ingin
+                             menghindari kos termurah tidak punya cara
+                             menyatakannya. -->
+                        <div class="grid grid-cols-2 gap-2">
+                            <InputNumber
+                                v-model="filter.harga_min"
+                                mode="currency"
+                                currency="IDR"
+                                locale="id-ID"
+                                :max-fraction-digits="0"
+                                :step="100000"
+                                placeholder="Harga minimum"
+                                class="w-full"
+                                size="large"
+                                input-class="w-full"
+                                aria-label="Harga minimum per bulan"
+                            />
+                            <InputNumber
+                                v-model="filter.harga_maks"
+                                mode="currency"
+                                currency="IDR"
+                                locale="id-ID"
+                                :max-fraction-digits="0"
+                                :step="100000"
+                                placeholder="Harga maksimum"
+                                class="w-full"
+                                size="large"
+                                input-class="w-full"
+                                aria-label="Harga maksimum per bulan"
+                            />
+                        </div>
 
                         <div class="flex gap-2">
                             <Button type="submit" label="Cari kos" size="large" class="grow" :loading="memuat" />
@@ -354,6 +493,69 @@ onMounted(cari);
                                 :step="100"
                                 class="mt-2 w-full"
                             />
+                        </div>
+
+                        <!--
+                            Penyaring fasilitas, mengikuti mockup hal. 59.
+                            Dilipat karena sepuluh kotak centang yang selalu
+                            terbuka mendorong daftar hasil jauh ke bawah layar
+                            ponsel — dan hasilnya yang dicari orang, bukan
+                            penyaringnya.
+                        -->
+                        <div class="sm:col-span-2">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <button
+                                    type="button"
+                                    class="inline-flex items-center gap-2 text-sm font-semibold text-[color:var(--color-indigo)]"
+                                    :aria-expanded="filterTerbuka"
+                                    @click="filterTerbuka = !filterTerbuka"
+                                >
+                                    <i
+                                        class="pi text-xs transition-transform"
+                                        :class="filterTerbuka ? 'pi-chevron-up' : 'pi-chevron-down'"
+                                        aria-hidden="true"
+                                    />
+                                    Fasilitas
+                                    <span
+                                        v-if="filter.fasilitas.length"
+                                        class="rounded-full bg-[color:var(--color-indigo)] px-2 py-0.5 text-xs text-white"
+                                    >
+                                        {{ filter.fasilitas.length }}
+                                    </span>
+                                </button>
+
+                                <button
+                                    v-if="adaFilterAktif"
+                                    type="button"
+                                    class="text-sm text-[color:var(--color-tinta)]/60 underline hover:text-[color:var(--color-maroon)]"
+                                    @click="bersihkanFilter"
+                                >
+                                    Bersihkan penyaring
+                                </button>
+                            </div>
+
+                            <Transition
+                                enter-active-class="transition duration-200 ease-out"
+                                leave-active-class="transition duration-150 ease-in"
+                                enter-from-class="opacity-0 -translate-y-1"
+                                leave-to-class="opacity-0 -translate-y-1"
+                            >
+                                <div v-if="filterTerbuka" class="mt-3 flex flex-wrap gap-2">
+                                    <button
+                                        v-for="nama in fasilitasPilihan"
+                                        :key="nama"
+                                        type="button"
+                                        class="rounded-full border px-3 py-1.5 text-sm transition"
+                                        :class="filter.fasilitas.includes(nama)
+                                            ? 'border-[color:var(--color-indigo)] bg-[color:var(--color-indigo)] text-white'
+                                            : 'border-[color:var(--color-garis)] hover:bg-[color:var(--color-kertas)]'"
+                                        :aria-pressed="filter.fasilitas.includes(nama)"
+                                        @click="alihkanFasilitas(nama)"
+                                    >
+                                        {{ nama }}
+                                    </button>
+                                </div>
+                            </Transition>
                         </div>
                     </form>
 
@@ -419,22 +621,11 @@ onMounted(cari);
                         <template v-else-if="daftarKos.length">Terdekat lebih dulu</template>
                     </p>
 
-                    <!-- Skeleton memakai bentuk kartu yang sama, sehingga tata
-                         letak tidak melompat saat data datang. -->
-                    <div v-if="memuat" class="grid gap-5 sm:grid-cols-2">
-                        <div
-                            v-for="n in 4"
-                            :key="n"
-                            class="overflow-hidden bg-white shadow-[0_12px_28px_-16px_rgba(22,35,63,0.38)]"
-                        >
-                            <Skeleton height="10rem" border-radius="0" />
-                            <div class="space-y-2.5 p-5">
-                                <Skeleton width="70%" height="1.2rem" />
-                                <Skeleton width="90%" height="0.8rem" />
-                                <Skeleton width="100%" height="0.5rem" />
-                                <Skeleton width="45%" height="1.2rem" />
-                                <Skeleton width="30%" height="0.8rem" />
-                            </div>
+                    <!-- Rangka tiruan mengikuti susunan mozaik yang sama,
+                         sehingga tata letak tidak melompat saat data datang. -->
+                    <div v-if="memuat" class="kisi-mozaik grid gap-5 sm:grid-cols-2">
+                        <div v-for="n in 5" :key="n" class="overflow-hidden rounded-xl">
+                            <Skeleton width="100%" height="100%" border-radius="12px" />
                         </div>
                     </div>
 
@@ -470,7 +661,7 @@ onMounted(cari);
                     <TransitionGroup
                         v-else
                         tag="div"
-                        class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3"
+                        class="kisi-mozaik grid gap-5 sm:grid-cols-2"
                         move-class="transition-transform duration-300 ease-out"
                     >
                         <KartuKos
@@ -479,6 +670,7 @@ onMounted(cari);
                             :key="kos.id"
                             v-muncul="{ nama: 'naik', jeda: Math.min(urutan, 7) * 70 }"
                             :kos="kos"
+                            :unggulan="idUnggulan.has(kos.id)"
                             :radius="filter.radius"
                             :tersorot="kosTersorot === kos.id"
                             @sorot="kosTersorot = $event"
@@ -508,3 +700,76 @@ onMounted(cari);
         </div>
     </div>
 </template>
+
+<style scoped>
+/*
+ * SUSUNAN MOZAIK
+ *
+ * Pola berulang tiap lima kartu: dua kartu lebar di baris atas, tiga kartu
+ * sempit di bawahnya. Dikerjakan dengan kisi enam kolom — dua kartu lebar
+ * mengambil tiga kolom masing-masing, tiga kartu sempit mengambil dua.
+ *
+ * Pengulangan tiap lima inilah yang membedakannya dari referensi aslinya.
+ * Di sana jumlah kartunya memang lima dan ditentukan penyusunnya; di sini
+ * jumlahnya bergantung hasil pencarian dan bisa nol sampai dua puluh empat.
+ * Pola yang tidak berulang akan kehabisan bentuk pada kartu keenam.
+ *
+ * Hanya berlaku mulai 1280px. Di bawah itu kolomnya terlalu sempit: kartu
+ * selebar dua dari enam kolom pada layar 1024px tinggal 150px, dan harganya
+ * tidak lagi muat satu baris. Layar sempit kembali ke dua kolom biasa.
+ */
+@media (min-width: 1280px) {
+    .kisi-mozaik {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+
+    .kisi-mozaik > :nth-child(5n + 1),
+    .kisi-mozaik > :nth-child(5n + 2) {
+        grid-column: span 3;
+        aspect-ratio: 16 / 10;
+    }
+
+    .kisi-mozaik > :nth-child(5n + 3),
+    .kisi-mozaik > :nth-child(5n + 4),
+    .kisi-mozaik > :nth-child(5n + 5) {
+        grid-column: span 2;
+        aspect-ratio: 4 / 3;
+    }
+
+    /*
+     * Sisa yang tidak genap lima dilebarkan agar barisnya tetap penuh.
+     *
+     * Tanpa ini, baris terakhir berakhir bolong — dan baris bolong terlihat
+     * seperti kartu yang gagal dimuat, bukan seperti daftar yang habis.
+     *
+     * Tiga kemungkinan sisa yang perlu ditangani. Sisa dua kartu sudah genap
+     * sendiri (3 + 3 kolom), sisa nol jelas tidak perlu apa-apa:
+     *
+     *   sisa 1 → kartu ke-(5n+1) sendirian  → melebar enam kolom
+     *   sisa 3 → kartu ke-(5n+3) sendirian di barisnya → melebar enam kolom
+     *   sisa 4 → kartu ke-(5n+4) menyisakan dua kolom → melebar jadi empat
+     *
+     * Kartu yang melebar penuh memakai tinggi tetap, bukan perbandingan sisi.
+     * Perbandingan 4/3 pada lebar 1200px menghasilkan kartu setinggi 900px —
+     * satu kos memakan seluruh layar.
+     */
+    .kisi-mozaik > :nth-child(5n + 1):last-child,
+    .kisi-mozaik > :nth-child(5n + 3):last-child {
+        grid-column: span 6;
+        aspect-ratio: auto;
+        height: 18rem;
+    }
+
+    .kisi-mozaik > :nth-child(5n + 4):last-child {
+        grid-column: span 4;
+    }
+}
+
+/* Di luar susunan mozaik, kartunya tetap butuh bentuk — tanpa aspect-ratio
+   tingginya mengikuti isi dan seluruh fotonya gepeng. */
+@media (max-width: 1279.98px) {
+    .kisi-mozaik > * {
+        aspect-ratio: 4 / 3;
+    }
+}
+</style>

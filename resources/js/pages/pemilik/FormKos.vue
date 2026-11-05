@@ -23,10 +23,13 @@ const formulir = reactive({
     fasilitas: [],
 });
 
-const fasilitasPilihan = [
-    'WiFi', 'Kamar Mandi Dalam', 'AC', 'Kasur', 'Lemari',
-    'Meja Belajar', 'Dapur Bersama', 'Parkir Motor', 'Air Panas', 'Laundry',
-];
+/*
+ * Daftar fasilitas datang dari server (config/ekost.php), bukan ditulis
+ * ulang di sini. Penyaring pencarian membaca daftar yang sama, dan satu
+ * perbedaan ejaan antara keduanya sudah cukup membuat penyaringnya tidak
+ * pernah menemukan kos mana pun — tanpa galat apa pun, hanya hasil kosong.
+ */
+const fasilitasPilihan = window.EKOST?.fasilitas ?? [];
 
 const memuat = ref(false);
 const mengirim = ref(false);
@@ -97,7 +100,7 @@ onMounted(muat);
 </script>
 
 <template>
-    <div class="mx-auto max-w-2xl px-4 py-6">
+    <div class="mx-auto max-w-2xl">
         <RouterLink :to="{ name: 'pemilik-kos' }" class="text-sm text-stone-500 hover:underline">
             &larr; Kembali ke daftar kos
         </RouterLink>

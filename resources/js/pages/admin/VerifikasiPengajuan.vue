@@ -57,7 +57,7 @@ onMounted(muat);
 </script>
 
 <template>
-    <div class="mx-auto max-w-3xl px-4 py-6">
+    <div class="mx-auto max-w-3xl">
         <h1 v-muncul:naik class="text-2xl font-semibold tracking-tight">
             Verifikasi Pengajuan Pemilik Kos
         </h1>

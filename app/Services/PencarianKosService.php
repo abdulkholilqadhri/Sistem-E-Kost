@@ -56,7 +56,7 @@ class PencarianKosService
     private const METER_PER_DERAJAT_LINTANG = 111_320;
 
     /**
-     * @param  array{tipe_kos?: ?string, harga_min?: ?int, harga_maks?: ?int, q?: ?string}  $filter
+     * @param  array{tipe_kos?: ?string, harga_min?: ?int, harga_maks?: ?int, fasilitas?: array<int, string>, q?: ?string}  $filter
      */
     public function cari(
         float $lat,
@@ -68,7 +68,10 @@ class PencarianKosService
     ): LengthAwarePaginator {
         $kandidat = $this->kueriKandidat($lat, $lng, $radiusMeter, $filter)->get();
 
-        $hasil = $this->hitungDanSaringJarak($kandidat, $lat, $lng, $radiusMeter);
+        $hasil = $this->saringFasilitas(
+            $this->hitungDanSaringJarak($kandidat, $lat, $lng, $radiusMeter),
+            $filter['fasilitas'] ?? [],
+        );
 
         return new LengthAwarePaginator(
             items: $hasil->forPage($halaman, $perHalaman)->values(),
@@ -82,7 +85,7 @@ class PencarianKosService
     /**
      * Tahap 1 — kotak pembatas, dikerjakan basis data.
      *
-     * @param  array{tipe_kos?: ?string, harga_min?: ?int, harga_maks?: ?int, q?: ?string}  $filter
+     * @param  array{tipe_kos?: ?string, harga_min?: ?int, harga_maks?: ?int, fasilitas?: array<int, string>, q?: ?string}  $filter
      * @return Builder<Kos>
      */
     private function kueriKandidat(float $lat, float $lng, int $radiusMeter, array $filter): Builder
@@ -134,6 +137,43 @@ class PencarianKosService
             })
             ->filter(fn (Kos $kos): bool => $kos->getAttribute('jarak_meter') <= $radiusMeter)
             ->sortBy(fn (Kos $kos): int => $kos->getAttribute('jarak_meter'))
+            ->values();
+    }
+
+    /**
+     * Tahap 3 — fasilitas, juga dikerjakan PHP.
+     *
+     * MENGAPA TIDAK DI SQL
+     *
+     * Kolom fasilitas bertipe JSON. Menyaringnya di basis data berarti
+     * whereJsonContains, yang terjemahannya berbeda antara MySQL dan SQLite
+     * dan pada sebagian versi SQLite tidak didukung sama sekali. Seluruh
+     * pengujian aplikasi ini berjalan di atas SQLite in-memory — alasan yang
+     * persis sama dengan mengapa Haversine juga tidak dijalankan di SQL.
+     *
+     * Beban tambahannya nihil: koleksi yang masuk ke sini sudah disempitkan
+     * lebih dulu oleh kotak pembatas dan radius, jadi yang diperiksa hanyalah
+     * kos yang memang berada di sekitar titik acuan.
+     *
+     * Semua fasilitas yang dipilih harus ada, bukan salah satunya. Orang yang
+     * mencentang WiFi dan AC sedang menyatakan dua syarat, bukan dua pilihan.
+     *
+     * @param  Collection<int, Kos>  $kandidat
+     * @param  array<int, string>  $diminta
+     * @return Collection<int, Kos>
+     */
+    private function saringFasilitas(Collection $kandidat, array $diminta): Collection
+    {
+        if ($diminta === []) {
+            return $kandidat;
+        }
+
+        return $kandidat
+            ->filter(function (Kos $kos) use ($diminta): bool {
+                $dimiliki = $kos->fasilitas ?? [];
+
+                return array_diff($diminta, $dimiliki) === [];
+            })
             ->values();
     }
 

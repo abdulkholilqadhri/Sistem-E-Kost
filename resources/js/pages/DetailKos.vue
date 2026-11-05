@@ -11,6 +11,7 @@ import Skeleton from 'primevue/skeleton';
 import Tag from 'primevue/tag';
 import { useToast } from 'primevue/usetoast';
 import api, { csrf, pesanGalat } from '../api';
+import { taburKonfeti } from '../konfeti';
 import DaftarUlasan from '../components/DaftarUlasan.vue';
 import PetaKos from '../components/PetaKos.vue';
 import { useAuth } from '../stores/auth';
@@ -123,6 +124,12 @@ async function pesan() {
         });
 
         berhasilPesan.value = true;
+
+        // Satu-satunya perayaan di seluruh aplikasi ini, dan hanya di sini:
+        // mengajukan pesanan adalah satu-satunya tindakan yang benar-benar
+        // berarti bagi penyewa.
+        taburKonfeti();
+
         toast.add({
             severity: 'success',
             summary: 'Pesanan terkirim',
@@ -444,7 +451,12 @@ onMounted(async () => {
                                 <span class="font-display text-xl font-semibold">{{ rupiah(totalHarga) }}</span>
                             </div>
 
+                            <!-- Satu-satunya tombol bermagnet di seluruh
+                                 aplikasi. Gerakan ini bekerja dengan menarik
+                                 perhatian ke satu tindakan; kalau semua tombol
+                                 bermagnet, tidak ada lagi yang menonjol. -->
                             <Button
+                                v-magnet
                                 type="submit"
                                 label="Ajukan pesanan"
                                 class="w-full"

@@ -9,9 +9,14 @@ const daftar = ref([]);
 const memuat = ref(true);
 const galat = ref(null);
 
-const formBayar = reactive({});
-const mengirim = ref(null);
-
+/*
+ * Pengunggahan bukti transfer tidak lagi dikerjakan di sini.
+ *
+ * Seluruh urusan pembayaran pindah ke halaman Pembayaran (SDD BAB IV, mockup
+ * hal. 61), yang memuat rincian tagihan, hitung mundur tenggat, dan kontak
+ * pemilik — hal-hal yang tidak muat di dalam kartu daftar ini. Halaman ini
+ * cukup menautkannya.
+ */
 async function muat() {
     memuat.value = true;
 
@@ -22,48 +27,6 @@ async function muat() {
         galat.value = pesanGalat(error, 'Gagal memuat pesanan.');
     } finally {
         memuat.value = false;
-    }
-}
-
-function siapkanForm(id) {
-    if (!formBayar[id]) {
-        formBayar[id] = { jumlah_bayar: '', nama_pengirim: '', tanggal_transfer: '', berkas: null, galat: null };
-    }
-
-    return formBayar[id];
-}
-
-function pilihBerkas(id, peristiwa) {
-    siapkanForm(id).berkas = peristiwa.target.files?.[0] ?? null;
-}
-
-async function kirimBukti(pesanan) {
-    const form = siapkanForm(pesanan.id);
-    form.galat = null;
-    mengirim.value = pesanan.id;
-
-    try {
-        await csrf();
-
-        // FormData, bukan JSON: berkas tidak dapat dikirim sebagai JSON.
-        const muatan = new FormData();
-        muatan.append('bukti', form.berkas);
-        muatan.append('jumlah_bayar', form.jumlah_bayar);
-
-        if (form.nama_pengirim) {
-            muatan.append('nama_pengirim', form.nama_pengirim);
-        }
-
-        if (form.tanggal_transfer) {
-            muatan.append('tanggal_transfer', form.tanggal_transfer);
-        }
-
-        await api.post(`/pemesanan/${pesanan.id}/pembayaran`, muatan);
-        await muat();
-    } catch (error) {
-        form.galat = pesanGalat(error, 'Bukti gagal dikirim.');
-    } finally {
-        mengirim.value = null;
     }
 }
 
@@ -156,7 +119,7 @@ onMounted(muat);
 </script>
 
 <template>
-    <div class="mx-auto max-w-3xl px-4 py-6">
+    <div class="mx-auto max-w-3xl">
         <h1 v-muncul:naik class="text-2xl font-semibold tracking-tight">Pesanan Saya</h1>
 
         <p v-if="memuat" class="mt-6 text-sm text-stone-500">Memuat...</p>
@@ -219,55 +182,22 @@ onMounted(muat);
                     </p>
                 </div>
 
-                <form
+                <!--
+                    Pembayaran punya halamannya sendiri (SDD BAB IV, mockup
+                    hal. 61), jadi di sini cukup tautannya. Formulir unggah
+                    yang dulu ada di tempat ini dihapus: dua formulir untuk
+                    satu pekerjaan berarti dua tempat yang harus diperbaiki
+                    setiap kali aturan pembayaran berubah, dan cepat atau
+                    lambat keduanya akan berbeda.
+                -->
+                <RouterLink
                     v-if="pesanan.status === 'menunggu_pembayaran'"
-                    class="mt-3 space-y-2 rounded-md bg-stone-50 p-3"
-                    @submit.prevent="kirimBukti(pesanan)"
+                    :to="{ name: 'pembayaran-detail', params: { id: pesanan.id } }"
+                    class="mt-3 inline-flex items-center gap-2 rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
                 >
-                    <p class="text-sm font-medium">Unggah bukti transfer</p>
-
-                    <p v-if="siapkanForm(pesanan.id).galat" class="rounded border border-red-300 bg-red-50 p-2 text-sm text-red-800">
-                        {{ siapkanForm(pesanan.id).galat }}
-                    </p>
-
-                    <input
-                        type="file"
-                        accept="image/jpeg,image/png,application/pdf"
-                        required
-                        class="w-full text-sm"
-                        @change="pilihBerkas(pesanan.id, $event)"
-                    >
-
-                    <div class="grid gap-2 sm:grid-cols-3">
-                        <input
-                            v-model="siapkanForm(pesanan.id).jumlah_bayar"
-                            type="number"
-                            min="1"
-                            required
-                            placeholder="Jumlah transfer"
-                            class="rounded-md border border-stone-300 px-2 py-1.5 text-sm"
-                        >
-                        <input
-                            v-model="siapkanForm(pesanan.id).nama_pengirim"
-                            type="text"
-                            placeholder="Nama pengirim"
-                            class="rounded-md border border-stone-300 px-2 py-1.5 text-sm"
-                        >
-                        <input
-                            v-model="siapkanForm(pesanan.id).tanggal_transfer"
-                            type="date"
-                            class="rounded-md border border-stone-300 px-2 py-1.5 text-sm"
-                        >
-                    </div>
-
-                    <button
-                        type="submit"
-                        class="rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-stone-700 disabled:opacity-50"
-                        :disabled="mengirim === pesanan.id"
-                    >
-                        {{ mengirim === pesanan.id ? 'Mengirim...' : 'Kirim Bukti' }}
-                    </button>
-                </form>
+                    Bayar &amp; unggah bukti
+                    <i class="pi pi-arrow-right text-[0.7rem]" aria-hidden="true" />
+                </RouterLink>
 
                 <!-- FR-09 — menulis ulasan setelah masa sewa berakhir. -->
                 <div
