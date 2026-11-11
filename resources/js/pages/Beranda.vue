@@ -13,6 +13,7 @@ import PetaKos from '../components/PetaKos.vue';
 import KartuKos from '../components/KartuKos.vue';
 import MotifSulur from '../components/MotifSulur.vue';
 import AngkaBerjalan from '../components/AngkaBerjalan.vue';
+import PitaFasilitas from '../components/PitaFasilitas.vue';
 
 const toast = useToast();
 const konfigurasi = window.EKOST ?? {};
@@ -576,6 +577,17 @@ onMounted(cari);
                     </div>
                 </div>
             </section>
+
+            <!--
+                Pita fasilitas sengaja di sini, menempel pada kotak pencarian,
+                dan bukan di dekat kaki halaman. Di kaki sudah ada pita ulasan
+                yang juga berjalan; dua pita bergerak yang bertetangga membuat
+                halaman terasa gelisah dan saling berebut perhatian.
+
+                Isinya fasilitasPilihan, daftar yang sama dengan penyaring di
+                atasnya — keduanya bersumber dari config/ekost.php.
+            -->
+            <PitaFasilitas :fasilitas="fasilitasPilihan" class="mt-4" />
 
             <!--
                 Pemilih tampilan khusus layar kecil. Di ponsel, daftar dan peta
