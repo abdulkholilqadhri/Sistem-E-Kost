@@ -1,10 +1,12 @@
 <script setup>
 import { computed, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useAuth } from '../stores/auth';
+import PilBerkaret from './PilBerkaret.vue';
 
 const auth = useAuth();
 const router = useRouter();
+const route = useRoute();
 const menuTerbuka = ref(false);
 
 /**
@@ -43,6 +45,19 @@ const menu = computed(() => {
     return [{ nama: 'beranda', label: 'Cari Kos' }];
 });
 
+/**
+ * Butir menu yang sedang ditandai pil.
+ *
+ * Penanda mengikuti rute, bukan klik terakhir. Pengguna tidak selalu
+ * berpindah lewat menu ini — mereka bisa masuk lewat kartu kos atau menekan
+ * tombol Back — dan penanda yang mengingat klik terakhir akan menunjuk
+ * halaman yang sudah ditinggalkan. Rute yang tidak ada di menu, misalnya
+ * halaman detail kos, membuat pil disembunyikan.
+ */
+const pilAktif = computed(() => {
+    return menu.value.some((item) => item.nama === route.name) ? route.name : null;
+});
+
 async function keluar() {
     await auth.logout();
     menuTerbuka.value = false;
@@ -74,17 +89,36 @@ async function keluar() {
         >
             <div class="grid grid-cols-[1fr_auto] items-center gap-3 lg:grid-cols-[1fr_auto_1fr]">
                 <!-- Tautan menu, kiri. Disembunyikan di layar kecil. -->
-                <div class="hidden items-center gap-1 lg:flex">
+                <PilBerkaret :aktif="pilAktif" class="hidden items-center gap-1 lg:flex">
+                    <!--
+                        Latar butir aktif kini digambar oleh pil yang meluncur
+                        di belakangnya, sehingga dua hal sengaja dibuang:
+
+                        Huruf tebal pada butir aktif. Huruf tebal lebih lebar,
+                        sehingga menggeser posisi butir di kanannya — dan pil
+                        yang sedang meluncur akan mengejar sasaran yang ikut
+                        pindah.
+
+                        Latar saat disentuh kursor. Warnanya sama dengan warna
+                        pil, sehingga butir yang disentuh kursor tak bisa
+                        dibedakan dari butir yang sedang terbuka. Yang tersisa
+                        hanya perubahan warna teks.
+                    -->
                     <RouterLink
                         v-for="item in menu"
                         :key="item.nama"
                         :to="{ name: item.nama }"
-                        class="rounded-lg px-3 py-1.5 text-sm text-[color:var(--color-tinta)]/75 transition hover:bg-[color:var(--color-kertas)] hover:text-[color:var(--color-tinta)]"
-                        active-class="bg-[color:var(--color-kertas)] font-semibold text-[color:var(--color-tinta)]"
+                        :data-pil="item.nama"
+                        class="relative rounded-lg px-3 py-1.5 text-sm transition"
+                        :class="
+                            pilAktif === item.nama
+                                ? 'text-[color:var(--color-tinta)]'
+                                : 'text-[color:var(--color-tinta)]/75 hover:text-[color:var(--color-tinta)]'
+                        "
                     >
                         {{ item.label }}
                     </RouterLink>
-                </div>
+                </PilBerkaret>
 
                 <!--
                     Logo di tengah pada layar lebar, di kiri pada layar kecil.
