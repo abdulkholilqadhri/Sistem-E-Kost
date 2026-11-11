@@ -1,5 +1,5 @@
 <script setup>
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 /**
  * Penanda berbentuk pil yang meluncur di belakang sederet tautan.
@@ -18,11 +18,31 @@ import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
  * Hanya itu sumber kesan karetnya — tidak ada pegas atau pantulan.
  *
  * Animasinya memakai requestAnimationFrame, bukan transisi CSS, karena
- * transisi CSS pada left dan width akan selalu bergerak serempak dan tidak
- * bisa diberi jeda yang berbeda untuk tiap tepi.
+ * transisi CSS pada posisi dan ukuran akan selalu bergerak serempak dan
+ * tidak bisa diberi jeda yang berbeda untuk tiap tepi.
+ *
+ * DUA SUMBU
+ *
+ * Deretan mendatar menganimasikan tepi kiri dan kanan; deretan tegak, tepi
+ * atas dan bawah. Selebihnya sama persis — durasi, jeda, kurva, dan cara
+ * menentukan arah. Di dalam kode keduanya disebut tepi "awal" dan "akhir"
+ * supaya satu jalur logika melayani kedua sumbu.
  */
 const props = defineProps({
     aktif: { type: [String, Number], default: null },
+
+    /** 'mendatar' untuk deretan menyamping, 'tegak' untuk deretan bersusun. */
+    arah: {
+        type: String,
+        default: 'mendatar',
+        validator: (nilai) => ['mendatar', 'tegak'].includes(nilai),
+    },
+
+    /** Warna latar pil, menyesuaikan permukaan tempat deretannya berada. */
+    warna: { type: String, default: 'var(--color-kertas)' },
+
+    /** Jari-jari sudut, menyesuaikan bentuk butir yang ditandai. */
+    jari: { type: String, default: '0.5rem' },
 });
 
 /** Lama tiap tepi menempuh perjalanannya. */
@@ -35,9 +55,26 @@ const DURASI_MS = 320;
 const JEDA_MS = 90;
 
 const jalur = ref(null);
-const kiri = ref(0);
-const kanan = ref(0);
+const awal = ref(0);
+const akhir = ref(0);
 const tampak = ref(false);
+
+const tegak = computed(() => props.arah === 'tegak');
+
+/*
+ * Pil direntangkan penuh di sumbu silang, sehingga yang perlu diatur hanya
+ * posisi dan panjangnya di sumbu gerak.
+ */
+const gayaPil = computed(() => {
+    const panjang = `${Math.max(0, akhir.value - awal.value)}px`;
+    const posisi = `${awal.value}px`;
+
+    return {
+        backgroundColor: props.warna,
+        borderRadius: props.jari,
+        ...(tegak.value ? { top: posisi, height: panjang } : { left: posisi, width: panjang }),
+    };
+});
 
 let bingkai = null;
 let pengamat = null;
@@ -60,33 +97,33 @@ function sembunyikan() {
     tampak.value = false;
 }
 
-function luncurkan(keKiri, keKanan) {
+function luncurkan(keAwal, keAkhir) {
     cancelAnimationFrame(bingkai);
 
-    const dariKiri = kiri.value;
-    const dariKanan = kanan.value;
+    const dariAwal = awal.value;
+    const dariAkhir = akhir.value;
 
     /*
      * Arah ditentukan dari titik tengah, bukan dari salah satu tepi. Butir
-     * menu tidak sama lebar: berpindah ke butir lebar di sebelah kanan bisa
-     * membuat tepi kirinya mundur sedikit, dan menilai dari tepi kiri saja
+     * tidak selalu sama panjang: berpindah ke butir panjang di depan bisa
+     * membuat tepi awalnya mundur sedikit, dan menilai dari tepi awal saja
      * akan membuat tepi yang salah berangkat lebih dulu.
      */
-    const keArahKanan = (keKiri + keKanan) / 2 > (dariKiri + dariKanan) / 2;
-    const jedaKiri = keArahKanan ? JEDA_MS : 0;
-    const jedaKanan = keArahKanan ? 0 : JEDA_MS;
+    const maju = (keAwal + keAkhir) / 2 > (dariAwal + dariAkhir) / 2;
+    const jedaAwal = maju ? JEDA_MS : 0;
+    const jedaAkhir = maju ? 0 : JEDA_MS;
 
     const mulai = performance.now();
 
     function langkah(sekarang) {
         const lewat = sekarang - mulai;
-        const majuKiri = jepit((lewat - jedaKiri) / DURASI_MS);
-        const majuKanan = jepit((lewat - jedaKanan) / DURASI_MS);
+        const majuAwal = jepit((lewat - jedaAwal) / DURASI_MS);
+        const majuAkhir = jepit((lewat - jedaAkhir) / DURASI_MS);
 
-        kiri.value = dariKiri + (keKiri - dariKiri) * landai(majuKiri);
-        kanan.value = dariKanan + (keKanan - dariKanan) * landai(majuKanan);
+        awal.value = dariAwal + (keAwal - dariAwal) * landai(majuAwal);
+        akhir.value = dariAkhir + (keAkhir - dariAkhir) * landai(majuAkhir);
 
-        if (majuKiri < 1 || majuKanan < 1) {
+        if (majuAwal < 1 || majuAkhir < 1) {
             bingkai = requestAnimationFrame(langkah);
         }
     }
@@ -127,31 +164,34 @@ function ukur(langsung = false) {
     const kotakSasaran = sasaran.getBoundingClientRect();
 
     /*
-     * Menu mendatar hanya tampil dari lg ke atas. Mengukurnya saat
-     * tersembunyi menghasilkan lebar nol di pojok kiri, dan pil selebar nol
-     * itu akan terlihat melesat masuk begitu layar diperlebar. Lebih baik
-     * disembunyikan, lalu dilompatkan langsung saat ResizeObserver melihat
-     * menunya muncul.
+     * Deretan yang sedang tersembunyi (display: none) mengukur nol. Pil
+     * selebar nol yang terlanjur ditaruh di pojok akan terlihat melesat
+     * masuk begitu deretannya tampil lagi. Lebih baik disembunyikan, lalu
+     * dilompatkan langsung saat ResizeObserver melihat deretannya muncul.
      */
-    if (kotakSasaran.width === 0) {
+    if (kotakSasaran.width === 0 || kotakSasaran.height === 0) {
         sembunyikan();
 
         return;
     }
 
-    const tujuanKiri = kotakSasaran.left - kotakWadah.left;
-    const tujuanKanan = kotakSasaran.right - kotakWadah.left;
+    const tujuanAwal = tegak.value
+        ? kotakSasaran.top - kotakWadah.top
+        : kotakSasaran.left - kotakWadah.left;
+    const tujuanAkhir = tegak.value
+        ? kotakSasaran.bottom - kotakWadah.top
+        : kotakSasaran.right - kotakWadah.left;
 
     if (langsung || !tampak.value || inginGerakDikurangi()) {
         cancelAnimationFrame(bingkai);
-        kiri.value = tujuanKiri;
-        kanan.value = tujuanKanan;
+        awal.value = tujuanAwal;
+        akhir.value = tujuanAkhir;
         tampak.value = true;
 
         return;
     }
 
-    luncurkan(tujuanKiri, tujuanKanan);
+    luncurkan(tujuanAwal, tujuanAkhir);
 }
 
 /*
@@ -167,14 +207,14 @@ watch(
 onMounted(() => {
     ukur(true);
 
-    // Perubahan ukuran — layar diperlebar, menu berganti karena peran — tidak
-    // dianimasikan. Pil yang meluncur sendiri tanpa dipicu pengguna terasa
-    // seperti kesalahan, bukan umpan balik.
+    // Perubahan ukuran — layar diubah lebarnya, menu berganti karena peran —
+    // tidak dianimasikan. Pil yang meluncur sendiri tanpa dipicu pengguna
+    // terasa seperti kesalahan, bukan umpan balik.
     pengamat = new ResizeObserver(() => ukur(true));
     pengamat.observe(jalur.value);
 
-    // Fonta display dimuat belakangan. Sebelum ia tiba, lebar teksnya meleset
-    // beberapa piksel dan pil akan tampak sedikit tidak pas.
+    // Fonta display dimuat belakangan. Sebelum ia tiba, ukuran teksnya
+    // meleset beberapa piksel dan pil akan tampak sedikit tidak pas.
     document.fonts?.ready.then(() => ukur(true));
 });
 
@@ -187,9 +227,9 @@ onBeforeUnmount(() => {
 <template>
     <div ref="jalur" class="relative">
         <span
-            class="pointer-events-none absolute inset-y-0 rounded-lg bg-[color:var(--color-kertas)] transition-opacity duration-200"
-            :class="tampak ? 'opacity-100' : 'opacity-0'"
-            :style="{ left: `${kiri}px`, width: `${Math.max(0, kanan - kiri)}px` }"
+            class="pointer-events-none absolute transition-opacity duration-200"
+            :class="[tegak ? 'inset-x-0' : 'inset-y-0', tampak ? 'opacity-100' : 'opacity-0']"
+            :style="gayaPil"
             aria-hidden="true"
         />
         <slot />

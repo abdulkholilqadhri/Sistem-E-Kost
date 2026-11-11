@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { labelArea, menuUntuk } from '../menuPeran';
 import { useAuth } from '../stores/auth';
+import PilBerkaret from './PilBerkaret.vue';
 
 const auth = useAuth();
 const route = useRoute();
@@ -18,6 +19,19 @@ const router = useRouter();
  */
 const menu = computed(() => menuUntuk(auth.peran).filter((item) => router.hasRoute(item.nama)));
 const area = computed(() => labelArea(auth.peran));
+
+/**
+ * Butir sidebar yang sedang ditandai pil.
+ *
+ * Penanda mengikuti rute, bukan klik terakhir, supaya tetap benar ketika
+ * pengguna berpindah lewat tombol di dalam halaman atau menekan tombol Back.
+ * Rute yang tidak punya butir sendiri — pembayaran satu pesanan, formulir
+ * tambah kos — membuat pil disembunyikan, sama seperti active-class yang
+ * juga tidak menyala di sana.
+ */
+const pilAktif = computed(() => {
+    return menu.value.some((item) => item.nama === route.name) ? route.name : null;
+});
 
 /**
  * Judul halaman untuk remah-remah di bilah atas.
@@ -91,16 +105,42 @@ async function keluar() {
                     Navigasi Akun
                 </p>
 
-                <RouterLink
-                    v-for="item in menu"
-                    :key="item.nama"
-                    :to="{ name: item.nama }"
-                    class="mb-0.5 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-[color:var(--color-tinta)]/75 transition hover:bg-[color:var(--color-kertas)] hover:text-[color:var(--color-tinta)]"
-                    active-class="bg-[color:var(--color-indigo)] font-semibold text-white hover:bg-[color:var(--color-indigo)] hover:text-white"
-                >
-                    <i :class="`pi ${item.ikon} text-sm`" aria-hidden="true" />
-                    {{ item.label }}
-                </RouterLink>
+                <!--
+                    Latar butir aktif digambar oleh pil yang meluncur di
+                    belakangnya, bukan oleh active-class.
+
+                    Pilnya sengaja terang, bukan indigo. Warna teks butir
+                    berganti seketika, sementara pil masih menempuh ~320 ms
+                    perjalanannya. Dengan pil gelap dan teks putih, butir
+                    tujuan sudah berteks putih di atas latar putih sebelum
+                    pilnya tiba — tak terbaca selama perjalanan itu. Teks
+                    gelap terbaca di atas pil maupun tanpa pil.
+
+                    Huruf tebal dipertahankan. Di sidebar setiap baris selebar
+                    penuh, jadi menebalkan huruf tidak menggeser posisi butir
+                    lain seperti yang terjadi pada deretan mendatar.
+
+                    Warna teks aktif diberi tanda ! karena kelas dasarnya juga
+                    mengatur warna teks (tinta/75), dan dalam CSS hasil Tailwind
+                    yang /75 tersusun belakangan sehingga selalu menang.
+
+                    Latar saat disentuh kursor dibuang karena warnanya kini
+                    sama dengan warna pil, sehingga butir yang disentuh kursor
+                    tak bisa dibedakan dari butir yang sedang terbuka.
+                -->
+                <PilBerkaret :aktif="pilAktif" arah="tegak">
+                    <RouterLink
+                        v-for="item in menu"
+                        :key="item.nama"
+                        :to="{ name: item.nama }"
+                        :data-pil="item.nama"
+                        class="relative mb-0.5 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-[color:var(--color-tinta)]/75 transition hover:text-[color:var(--color-tinta)]"
+                        active-class="font-semibold text-[color:var(--color-tinta)]!"
+                    >
+                        <i :class="`pi ${item.ikon} text-sm`" aria-hidden="true" />
+                        {{ item.label }}
+                    </RouterLink>
+                </PilBerkaret>
             </nav>
 
             <!-- Keluar duduk di kaki sidebar, terpisah dari menu navigasi,
