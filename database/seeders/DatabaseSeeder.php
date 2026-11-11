@@ -8,7 +8,9 @@ use App\Models\Pemesanan;
 use App\Models\PengajuanPemilik;
 use App\Models\Ulasan;
 use App\Models\User;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -69,7 +71,7 @@ class DatabaseSeeder extends Seeder
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, Kos>  $semuaKos
+     * @param  Collection<int, Kos>  $semuaKos
      */
     private function buatFoto($semuaKos): void
     {
@@ -121,6 +123,23 @@ class DatabaseSeeder extends Seeder
      * galeri satu kos tidak berisi tiga kamar tidur dan kartu-kartu di daftar
      * tidak semuanya berwarna sama.
      *
+     * 'foto' memakai susunan yang sama, dari public/foto-contoh/foto. Semua
+     * berlisensi CC0, sehingga boleh disimpan di repositori tanpa atribusi.
+     * Sumbernya tetap dicatat agar asal-usulnya bisa diperiksa:
+     *
+     *   depan-1  https://www.rawpixel.com/image/8812187/apartment-building
+     *   depan-2  https://www.rawpixel.com/image/3290785/free-photo-image-apartment-building-architecture-banister
+     *   depan-3  https://www.rawpixel.com/image/3297614/free-photo-image-automobile-building-car
+     *   depan-4  https://www.rawpixel.com/image/3297774/free-photo-image-buildings-cc0-creative-commons
+     *   kamar-1  https://stocksnap.io/photo/apartment-bed-EGXWIV409M (Medhat Ayad)
+     *   kamar-2  https://www.rawpixel.com/image/5927139/photo-image-public-domain-wood-room
+     *   kamar-3  https://stocksnap.io/photo/bedroom-clean-OE0F9BHXJQ (Burst)
+     *   kamar-4  https://stocksnap.io/photo/bedroom-bed-9R85GU3I2P (Mary Whitney)
+     *   mandi-1  https://www.rawpixel.com/image/6042971/photo-image-public-domain-house-room
+     *   mandi-2  https://www.rawpixel.com/image/6077486/dsc09616
+     *   mandi-3  https://www.rawpixel.com/image/9676690/modern-house-interior
+     *   mandi-4  https://www.rawpixel.com/image/6077484/dsc09337
+     *
      * Untuk 'picsum', kuncinya ditahan pada nilai tetap, bukan acak setiap
      * permintaan. Tanpa itu, setiap muat ulang halaman mengganti seluruh foto
      * — dan kartu yang gambarnya berganti-ganti terlihat rusak, bukan hidup.
@@ -132,13 +151,17 @@ class DatabaseSeeder extends Seeder
         }
 
         $adegan = ['depan', 'kamar', 'mandi'][$urutan];
-        $warna = ($kosId % 4) + 1;
+        $varian = ($kosId % 4) + 1;
 
-        return "/foto-contoh/{$adegan}-{$warna}.svg";
+        if ($sumber === 'foto') {
+            return "/foto-contoh/foto/{$adegan}-{$varian}.jpg";
+        }
+
+        return "/foto-contoh/{$adegan}-{$varian}.svg";
     }
 
     /**
-     * @param  \Illuminate\Contracts\Filesystem\Filesystem  $disk
+     * @param  Filesystem  $disk
      */
     private function simpanGambarTenun($disk, Kos $kos, int $urutan, string $keterangan): string
     {
@@ -227,8 +250,8 @@ class DatabaseSeeder extends Seeder
      * Pemesanan pada beberapa tahap sekaligus, supaya setiap layar punya
      * sesuatu untuk ditampilkan tanpa harus menjalani seluruh alur dari awal.
      *
-     * @param  \Illuminate\Support\Collection<int, Kos>  $kosUtama
-     * @param  \Illuminate\Support\Collection<int, User>  $penyewaLain
+     * @param  Collection<int, Kos>  $kosUtama
+     * @param  Collection<int, User>  $penyewaLain
      */
     private function buatPemesanan($kosUtama, User $penyewaUtama, $penyewaLain): void
     {
@@ -272,8 +295,8 @@ class DatabaseSeeder extends Seeder
      * dengan aplikasinya: setiap ulasan dibuatkan pemesanan selesai miliknya
      * sendiri, bukan ditempelkan sembarangan.
      *
-     * @param  \Illuminate\Support\Collection<int, Kos>  $kosUtama
-     * @param  \Illuminate\Support\Collection<int, User>  $penyewaLain
+     * @param  Collection<int, Kos>  $kosUtama
+     * @param  Collection<int, User>  $penyewaLain
      */
     private function buatUlasan($kosUtama, $penyewaLain): void
     {

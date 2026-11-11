@@ -114,6 +114,12 @@ return [
     | Menentukan gambar apa yang dipasang seeder pada kos contoh. Tidak
     | berpengaruh sama sekali pada foto yang diunggah pemilik kos sungguhan.
     |
+    |   'foto'      — foto berlisensi CC0 dari public/foto-contoh/foto. Tampak
+    |                 depan, kamar tidur, dan kamar mandi, empat varian
+    |                 masing-masing. Diunduh sekali lewat Openverse dari
+    |                 StockSnap dan rawpixel lalu disimpan di proyek, jadi
+    |                 sama amannya dengan ilustrasi saat tidak ada koneksi.
+    |                 Sumber tiap berkas dicatat di DatabaseSeeder.
     |   'ilustrasi' — ilustrasi ruangan dari public/foto-contoh. Tampak depan,
     |                 kamar tidur, dan kamar mandi, dalam empat warna. Berkasnya
     |                 ada di dalam proyek, sehingga tidak pernah gagal dimuat
@@ -125,13 +131,15 @@ return [
     |                 GD. Datar, tetapi memuat nama kos dan penanda "DATA
     |                 SIMULASI" di atasnya.
     |
-    | Bawaannya 'ilustrasi'. Untuk sidang, inilah yang paling aman: gambar yang
-    | gagal dimuat meninggalkan kartu kosong di seluruh halaman, dan itu terjadi
-    | justru pada saat yang paling tidak tepat.
+    | Bawaannya 'foto'. Untuk sidang, sumber yang tersimpan di proyek adalah
+    | yang paling aman: gambar yang gagal dimuat meninggalkan kartu kosong di
+    | seluruh halaman, dan itu terjadi justru pada saat yang paling tidak
+    | tepat. Foto sungguhan dipilih di atas ilustrasi karena kartu kos lebih
+    | mudah dinilai penguji bila tampak seperti iklan kos yang sebenarnya.
     |
     */
 
-    'foto_simulasi' => env('EKOST_FOTO_SIMULASI', 'ilustrasi'),
+    'foto_simulasi' => env('EKOST_FOTO_SIMULASI', 'foto'),
 
     /*
     |--------------------------------------------------------------------------
